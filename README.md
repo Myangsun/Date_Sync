@@ -12,5 +12,5 @@
 ## Usage
 
 ```python
-python usage_example.py path/to/your/video.mp4
+python video_analysis.py path/to/your/video.mp4
 ```
