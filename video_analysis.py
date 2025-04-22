@@ -9,8 +9,12 @@ from tqdm import tqdm
 # Initialize OpenAI client (make sure your OPENAI_API_KEY is set in env)
 client = OpenAI()
 
+video_file="1.mp4"
+audio_file="audio.wav"
+frames_dir="frames"
+output_dir="output"
 
-def extract_audio_and_frames(video_file, audio_file="audio.wav", frames_dir="frames"):
+def extract_audio_and_frames(video_file, audio_file, frames_dir):
     """Extracts the audio track and video frames."""
     subprocess.call(
         f"ffmpeg -y -i {video_file} -q:a 0 -map a {audio_file}", shell=True)
@@ -29,7 +33,7 @@ def extract_audio_and_frames(video_file, audio_file="audio.wav", frames_dir="fra
     return total_frames, fps, duration
 
 
-def extract_text_features(audio_file="audio.wav"):
+def extract_text_features(audio_file):
     """Uses Whisper + GPT to get a single sentiment score [-1,1]."""
     # 1) Transcribe
     with open(audio_file, "rb") as f:
@@ -64,7 +68,7 @@ def extract_text_features(audio_file="audio.wav"):
     return text, text_feat
 
 
-def extract_audio_features(audio_file="audio.wav"):
+def extract_audio_features(audio_file):
     """Extracts mean pitch and intensity via praat-parselmouth."""
     try:
         import parselmouth
@@ -82,7 +86,7 @@ def extract_audio_features(audio_file="audio.wav"):
     return audio_feat
 
 
-def extract_visual_time_series(frames_dir="frames"):
+def extract_visual_time_series(frames_dir):
     """Returns per-frame emotion valence = (happy+surprise)-(angry+disgust+fear+sad)."""
     try:
         # First, properly import MoviePy if needed for FER
@@ -203,7 +207,7 @@ def extract_visual_time_series(frames_dir="frames"):
     return np.array(valence_ts), emotion_data
 
 
-def extract_face_mesh_time_series(frames_dir="frames"):
+def extract_face_mesh_time_series(frames_dir):
     """
     Returns two arrays:
       - saccade_ts: per-frame eye movement magnitude
@@ -287,7 +291,7 @@ def get_frame_times(video_file, n_frames):
     return np.arange(n_frames) / fps
 
 
-def create_metrics_visualization(video_path, fps, valence, emotion_data, face_features, output_dir="output"):
+def create_metrics_visualization(video_path, fps, valence, emotion_data, face_features, output_dir):
     """
     Creates a static visualization showing metrics over time that can be used with external tools.
     """
@@ -617,7 +621,7 @@ def analyze_multimodal_features(text, text_feat, audio_feat, valence, saccade, c
     return analysis
 
 
-def analyze_video(video_file, output_dir="output"):
+def analyze_video(video_file, output_dir):
     """Runs end-to-end multimodal analysis + creates visualization."""
     os.makedirs(output_dir, exist_ok=True)
 
