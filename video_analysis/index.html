@@ -41,7 +41,7 @@
         margin-top: 10px;
         border: 1px solid #ccc;
         background: #f9f9f9;
-        height: 150px;
+        max-height: 300px;
         overflow-y: auto;
         font-size: 14px;
       }
@@ -81,6 +81,12 @@
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         margin-top: 10px;
         height: 200px;
+      }
+      .metrics-image {
+        width: 100%;
+        margin-top: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
       }
       .file-upload {
         display: flex;
@@ -203,6 +209,12 @@
         <div class="chart-wrapper">
           <canvas id="chart1"></canvas>
         </div>
+        <img
+          id="metrics-img1"
+          class="metrics-image"
+          style="display: none"
+          alt="Video 1 Metrics Over Time"
+        />
       </div>
 
       <div class="video-block">
@@ -222,6 +234,12 @@
         <div class="chart-wrapper">
           <canvas id="chart2"></canvas>
         </div>
+        <img
+          id="metrics-img2"
+          class="metrics-image"
+          style="display: none"
+          alt="Video 2 Metrics Over Time"
+        />
       </div>
     </div>
 
@@ -246,6 +264,8 @@
       const playBtn = document.getElementById("play-btn");
       const v1 = document.getElementById("video1");
       const v2 = document.getElementById("video2");
+      const metricsImg1 = document.getElementById("metrics-img1");
+      const metricsImg2 = document.getElementById("metrics-img2");
 
       // Enable analyze button when both videos are uploaded
       function checkUploadStatus() {
@@ -405,18 +425,9 @@
               data1 = prepareTimeSeriesData(metrics1);
               data2 = prepareTimeSeriesData(metrics2);
 
-              // Limit feedback text to around 150 words
-              function limitWords(text, limit = 150) {
-                const words = text.split(/\s+/);
-                if (words.length <= limit) return text;
-                return words.slice(0, limit).join(" ") + "...";
-              }
-
-              // Display analysis text (limited to ~150 words)
-              document.getElementById("text1").textContent =
-                limitWords(analysis1);
-              document.getElementById("text2").textContent =
-                limitWords(analysis2);
+              // Display analysis text (without word limit)
+              document.getElementById("text1").textContent = analysis1;
+              document.getElementById("text2").textContent = analysis2;
 
               // Display compatibility score
               compatibilityScore = scoreData.score;
@@ -432,6 +443,13 @@
               // Create charts for each video
               createVideoChart("chart1", data1, "Video 1 Emotional Metrics");
               createVideoChart("chart2", data2, "Video 2 Emotional Metrics");
+
+              // Display metrics images
+              metricsImg1.src = "output/video_1/metrics_over_time.png";
+              metricsImg1.style.display = "block";
+
+              metricsImg2.src = "output/video_2/metrics_over_time.png";
+              metricsImg2.style.display = "block";
 
               // Update time slider max value
               const maxTime = Math.max(
