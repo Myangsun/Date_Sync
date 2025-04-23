@@ -1,85 +1,63 @@
 import os
-import json
+import argparse
 import numpy as np
-from flask import Flask, render_template, request, jsonify
+
 from utils.video_io import extract_audio_and_frames
+from utils.visualization import create_metrics_visualization
 from analysis.text_features import extract_text_features
 from analysis.audio_features import extract_audio_features
 from analysis.visual_features import extract_visual_time_series
 from analysis.face_mesh import extract_face_mesh_time_series
 from analysis.crossmodal_analysis import analyze_multimodal_features
 
-app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = "static/uploads"
-app.config['DATA_FOLDER']   = "static/data"
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-os.makedirs(app.config['DATA_FOLDER'], exist_ok=True)
 
-@app.route("/")
-def index():
-    return render_template("index.html")
+def analyze_video(video_path, output_root):
+    # 获取视频文件名，不带扩展名
+    video_name = os.path.splitext(os.path.basename(video_path))[0]
+    output_dir = os.path.join(output_root, video_name)
+    os.makedirs(output_dir, exist_ok=True)
 
+    # 设定输出路径
+    audio_path = os.path.join(output_dir, "audio.wav")
+    frames_dir = os.path.join(output_dir, "frames")
 
-@app.route("/upload", methods=["POST"])
-def upload_video():
-    # 接收文件
-    f = request.files["video"]
-    save_path = os.path.join(app.config['UPLOAD_FOLDER'], "video.mp4")
-    f.save(save_path)
+    # 1. 抽帧 & 音频
+    total_frames, fps, duration = extract_audio_and_frames(video_path, audio_path, frames_dir)
+    print(f"\n🎞️ [{video_name}] {total_frames}帧 @ {fps:.2f}fps, 时长 {duration:.1f}s")
 
-    # 1) 提取音频+帧
-    audio_path = os.path.join(app.config['DATA_FOLDER'], "audio.wav")
-    frames_dir = os.path.join(app.config['DATA_FOLDER'], "frames")
-    os.makedirs(frames_dir, exist_ok=True)
-    total_frames, fps, duration = extract_audio_and_frames(
-        save_path, audio_path, frames_dir
-    )
-
-    # 2) 文本情绪
+    # 2. Whisper 文本情绪
     text, text_feat = extract_text_features(audio_path)
 
-    # 3) 声学特征
+    # 3. 声音特征（pitch, intensity）
     audio_feat = extract_audio_features(audio_path)
 
-    # 4) 表情 valence
+    # 4. 图像情绪 valence（FER）
     valence, emotion_data = extract_visual_time_series(frames_dir)
 
-    # 5) 面部特征
+    # 5. 面部特征（mediapipe）
     saccade, comfort, face_features = extract_face_mesh_time_series(frames_dir)
 
-    # 6) GPT 跨模态分析
+    # 6. 可视化输出（图 + CSV）
+    metrics_png, metrics_csv = create_metrics_visualization(
+        fps, valence, emotion_data, face_features, output_dir
+    )
+
+    # 7. GPT 跨模态总结
     analysis = analyze_multimodal_features(
         text, text_feat, audio_feat, valence, saccade, comfort
     )
+    with open(os.path.join(output_dir, "crossmodal_analysis.txt"), "w") as f:
+        f.write(analysis)
 
-    # 7) 构造 metrics.json
-    metrics = []
-    for i, t in enumerate(np.arange(len(valence)) / fps):
-        metrics.append({
-            "time":    float(t),
-            "valence": float(valence[i]),
-            "comfort": float(comfort[i]),
-            "engagement": float(saccade[i])
-        })
-    with open(os.path.join(app.config['DATA_FOLDER'], "metrics.json"), "w") as mf:
-        json.dump(metrics, mf)
-
-    # 8) 保存建议文本
-    with open(os.path.join(app.config['DATA_FOLDER'], "analysis.txt"), "w") as af:
-        af.write(analysis)
-
-    return jsonify({"status": "ok"})
-
-
-@app.route("/metrics")
-def get_metrics():
-    return app.send_static_file("data/metrics.json")
-
-
-@app.route("/analysis")
-def get_analysis():
-    return app.send_static_file("data/analysis.txt")
+    print(f"\n✅ 完成 → {output_dir}")
+    return output_dir
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    parser = argparse.ArgumentParser(description="Run multimodal emotion analysis on video(s)")
+    parser.add_argument("video_paths", nargs="+", help="Path(s) to video file(s)")
+    parser.add_argument("--output-dir", default="output", help="Root directory for output")
+    args = parser.parse_args()
+
+    for video_path in args.video_paths:
+        analyze_video(video_path, args.output_dir)
