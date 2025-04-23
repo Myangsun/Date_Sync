@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DateSync - Dual Video Analysis</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; margin: 20px; }
+    .video-row { display: flex; justify-content: center; gap: 40px; margin-bottom: 20px; }
+    .video-block { width: 45%; }
+    .frame-img { width: 100%; border: 1px solid #ccc; margin-bottom: 10px; }
+    .dashboard { display: flex; justify-content: space-around; margin-top: 10px; }
+    .plot-img { width: 100%; border: 1px solid #ccc; margin-top: 10px; }
+    .feedback { text-align: left; padding: 10px; margin-top: 10px; border: 1px solid #ccc; background: #f9f9f9; }
+  </style>
+</head>
+<body>
+  <h1>DateSync</h1>
+  <p>Dual Video Multimodal Emotion Analysis</p>
+
+  <button onclick="togglePlay()">▶️ Play / ⏸ Pause</button>
+  
+  <div class="video-row">
+    <div class="video-block">
+      <h2>Video 1</h2>
+      <img id="frame1" class="frame-img" src="output/video_1/frames/frame_0001.jpg" alt="Frame 1">
+      <div class="dashboard">
+        <div>Valence: <span id="val1">-</span></div>
+        <div>Comfort: <span id="com1">-</span></div>
+        <div>Engagement: <span id="eng1">-</span></div>
+      </div>
+      <div class="feedback">
+        <h3>Feedback Video 1</h3>
+        <pre id="text1">Loading...</pre>
+      </div>
+      <img src="output/video_1/metrics_over_time.png" class="plot-img" alt="Plot 1">
+    </div>
+
+    <div class="video-block">
+      <h2>Video 2</h2>
+      <img id="frame2" class="frame-img" src="output/video_2/frames/frame_0001.jpg" alt="Frame 2">
+      <div class="dashboard">
+        <div>Valence: <span id="val2">-</span></div>
+        <div>Comfort: <span id="com2">-</span></div>
+        <div>Engagement: <span id="eng2">-</span></div>
+      </div>
+      <div class="feedback">
+        <h3>Feedback Video 2</h3>
+        <pre id="text2">Loading...</pre>
+      </div>
+      <img src="output/video_2/metrics_over_time.png" class="plot-img" alt="Plot 2">
+    </div>
+  </div>
+
+
+  <script>
+    let frame = 1;
+    let interval = null;
+    let data1 = [], data2 = [];
+
+    async function loadCSV(url) {
+      const res = await fetch(url);
+      const text = await res.text();
+      const [header, ...lines] = text.trim().split('\n');
+      const keys = header.split(',');
+      return lines.map(l => {
+        const obj = {};
+        l.split(',').forEach((v, i) => obj[keys[i]] = parseFloat(v));
+        return obj;
+      });
+    }
+
+    async function loadText(url, elementId) {
+      const res = await fetch(url);
+      const text = await res.text();
+      document.getElementById(elementId).textContent = text;
+    }
+
+    async function init() {
+      data1 = await loadCSV("output/video_1/metrics_data.csv");
+      data2 = await loadCSV("output/video_2/metrics_data.csv");
+      loadText("output/video_1/crossmodal_analysis.txt", "text1");
+      loadText("output/video_2/crossmodal_analysis.txt", "text2");
+    }
+
+    function togglePlay() {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      } else {
+        interval = setInterval(() => {
+          frame++;
+          updateUI();
+        }, 1000);
+      }
+    }
+
+    init();
+    updateUI();
+
+    function updateUI() {
+      const f = String(frame).padStart(4, '0');
+      document.getElementById("frame1").src = `output/video_1/frames/frame_${f}.jpg`;
+      document.getElementById("frame2").src = `output/video_2/frames/frame_${f}.jpg`;
+
+      if (data1[frame]) {
+        document.getElementById("val1").textContent = data1[frame].valence.toFixed(2);
+        document.getElementById("com1").textContent = data1[frame].comfort.toFixed(2);
+        document.getElementById("eng1").textContent = (data1[frame].happy + data1[frame].surprise).toFixed(2);
+      }
+      if (data2[frame]) {
+        document.getElementById("val2").textContent = data2[frame].valence.toFixed(2);
+        document.getElementById("com2").textContent = data2[frame].comfort.toFixed(2);
+        document.getElementById("eng2").textContent = (data2[frame].happy + data2[frame].surprise).toFixed(2);
+      }
+    }
+  </script>
+</body>
+</html>
