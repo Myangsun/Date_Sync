@@ -10,7 +10,7 @@
     video { width: 100%; border: 1px solid #ccc; margin-bottom: 10px; }
     .dashboard { display: flex; justify-content: space-around; margin-top: 10px; }
     .plot-img { width: 100%; border: 1px solid #ccc; margin-top: 10px; }
-    .feedback { text-align: left; padding: 10px; margin-top: 10px; border: 1px solid #ccc; background: #f9f9f9; }
+    .feedback { text-align: left; padding: 10px; margin-top: 10px; border: 1px solid #ccc; background: #f9f9f9; white-space: pre-wrap; overflow-wrap: break-word; word-break: break-word; }
   </style>
 </head>
 <body>
@@ -71,16 +71,22 @@
     }
 
     async function loadText(url, elementId) {
-      const res = await fetch(url);
-      const text = await res.text();
-      document.getElementById(elementId).textContent = text;
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Failed to fetch ${url}`);
+        const text = await res.text();
+        document.getElementById(elementId).textContent = text;
+      } catch (err) {
+        document.getElementById(elementId).textContent = "Failed to load text.";
+        console.error(err);
+      }
     }
 
     async function init() {
       data1 = await loadCSV("output/video_1/metrics_data.csv");
       data2 = await loadCSV("output/video_2/metrics_data.csv");
-      loadText("output/video_1/crossmodal_analysis.txt", "text1");
-      loadText("output/video_2/crossmodal_analysis.txt", "text2");
+      await loadText("output/video_1/crossmodal_analysis.txt", "text1");
+      await loadText("output/video_2/crossmodal_analysis.txt", "text2");
     }
 
     function updateMetrics(videoElement, data, valId, comId, engId) {
