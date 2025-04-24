@@ -27,6 +27,12 @@
         gap: 40px;
         margin-bottom: 20px;
       }
+      .plot-row {
+        display: flex;
+        justify-content: center;
+        gap: 40px;
+        margin-bottom: 20px;
+      }
       .video-block {
         width: 45%;
       }
@@ -57,13 +63,15 @@
         margin: 5px 0;
       }
       .compatibility-score {
+        width: 90%;
         font-size: 24px;
         font-weight: bold;
-        margin: 15px;
+        margin: 15px auto;
         padding: 10px;
         border-radius: 10px;
         background: linear-gradient(45deg, #f3ec78, #af4261);
         color: white;
+        text-align: center;
       }
       .metric {
         font-weight: bold;
@@ -104,11 +112,12 @@
         font-size: 14px;
       }
       .detailed-analysis {
+        width: 90%;
         text-align: left;
         background: #f9f9f9;
         padding: 15px;
         border-radius: 8px;
-        margin: 15px 0;
+        margin: 15px auto;
       }
       .status-indicator {
         margin: 10px auto;
@@ -174,10 +183,6 @@
       Analysis may take several minutes to complete. Please wait...
     </div>
 
-    <div class="compatibility-score" id="compatibility-score">
-      Date Compatibility Score: --
-    </div>
-
     <div class="time-slider-container">
       <div class="time-display">Time: <span id="current-time">0</span>s</div>
       <input
@@ -202,19 +207,14 @@
           <div>Comfort: <span id="com1" class="metric">-</span></div>
           <div>Engagement: <span id="eng1" class="metric">-</span></div>
         </div>
+
+        <div class="chart-wrapper">
+          <canvas id="chart1"></canvas>
+        </div>
         <div class="feedback">
           <h3>Feedback Video 1</h3>
           <p id="text1">Upload and analyze videos to see feedback</p>
         </div>
-        <div class="chart-wrapper">
-          <canvas id="chart1"></canvas>
-        </div>
-        <img
-          id="metrics-img1"
-          class="metrics-image"
-          style="display: none"
-          alt="Video 1 Metrics Over Time"
-        />
       </div>
 
       <div class="video-block">
@@ -227,13 +227,37 @@
           <div>Comfort: <span id="com2" class="metric">-</span></div>
           <div>Engagement: <span id="eng2" class="metric">-</span></div>
         </div>
+        <div class="chart-wrapper">
+          <canvas id="chart2"></canvas>
+        </div>
         <div class="feedback">
           <h3>Feedback Video 2</h3>
           <p id="text2">Upload and analyze videos to see feedback</p>
         </div>
-        <div class="chart-wrapper">
-          <canvas id="chart2"></canvas>
-        </div>
+      </div>
+    </div>
+
+    <div class="compatibility-score" id="compatibility-score">
+      Date Compatibility Score: --
+    </div>
+
+    <div class="detailed-analysis" id="detailed-analysis">
+      <h2>Compatibility Analysis</h2>
+      <p>Upload and analyze videos to see detailed compatibility insights</p>
+    </div>
+
+    <div class="plot-row" id="plot-row">
+      <div class="video-block">
+        <h2>Detail Metrics Video 1</h2>
+        <img
+          id="metrics-img1"
+          class="metrics-image"
+          style="display: none"
+          alt="Video 1 Metrics Over Time"
+        />
+      </div>
+      <div class="video-block">
+        <h2>Detail Metrics Video 2</h2>
         <img
           id="metrics-img2"
           class="metrics-image"
@@ -241,11 +265,6 @@
           alt="Video 2 Metrics Over Time"
         />
       </div>
-    </div>
-
-    <div class="detailed-analysis" id="detailed-analysis">
-      <h2>Compatibility Analysis</h2>
-      <p>Upload and analyze videos to see detailed compatibility insights</p>
     </div>
 
     <script>
@@ -571,14 +590,33 @@
       window.addEventListener("load", adjustSliderWidth);
       window.addEventListener("resize", adjustSliderWidth);
 
-      // Time slider functionality
+      // Update time slider max value based on actual video duration
+      v1.addEventListener("loadedmetadata", function () {
+        const maxDuration = Math.max(v1.duration, v2.duration || 0);
+        if (maxDuration && maxDuration > 0) {
+          timeSlider.max = Math.floor(maxDuration);
+        }
+      });
+
+      v2.addEventListener("loadedmetadata", function () {
+        const maxDuration = Math.max(v1.duration || 0, v2.duration);
+        if (maxDuration && maxDuration > 0) {
+          timeSlider.max = Math.floor(maxDuration);
+        }
+      });
+
+      // Enhanced slider functionality to sync with video
       timeSlider.addEventListener("input", function () {
         const time = parseInt(this.value);
         currentTimeDisplay.textContent = time;
 
-        // Set video times
-        if (v1.duration) v1.currentTime = time;
-        if (v2.duration) v2.currentTime = time;
+        // Set video times and make sure playback is paused during scrubbing
+        if (v1.duration) {
+          v1.currentTime = time;
+        }
+        if (v2.duration) {
+          v2.currentTime = time;
+        }
 
         // Update metrics displays
         updateMetrics(time);
