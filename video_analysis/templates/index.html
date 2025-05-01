@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DateSync – Dual Video Analysis</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/styles.css') }}"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <header class="main-header">
+        <h1>DateSync</h1>
+        <p class="subtitle">Video Date Assistant</p>
+      </header>
+
+      <section class="upload-section">
+        <div class="file-upload">
+          <label for="video1-upload" class="file-label">Video 1</label>
+          <input id="video1-upload" type="file" accept="video/*" />
+        </div>
+        <div class="file-upload">
+          <label for="video2-upload" class="file-label">Video 2</label>
+          <input id="video2-upload" type="file" accept="video/*" />
+        </div>
+        <button id="analyze-btn" class="btn primary" disabled>Analyze</button>
+      </section>
+
+      <section class="sync-controls">
+        <div class="time-slider-container">
+          <span class="time-display">
+            Time – <span id="current-time">0</span>s
+          </span>
+          <input
+            id="time-slider"
+            class="time-slider"
+            type="range"
+            min="0"
+            max="100"
+            value="0"
+          />
+          <button id="play-btn" class="btn secondary">Play Both</button>
+        </div>
+        <div id="status-indicator" class="status-indicator"></div>
+      </section>
+
+      <section class="videos-grid">
+        <!-- VIDEO CARD 1 -->
+        <div class="video-card">
+          <h2>Video 1</h2>
+          <video id="video1" controls></video>
+          <div class="metrics-row">
+            <div>Valence: <span id="val1">–</span></div>
+            <div>Comfort: <span id="com1">–</span></div>
+            <div>Engagement: <span id="eng1">–</span></div>
+          </div>
+          <div class="chart-container">
+            <canvas id="chart1"></canvas>
+          </div>
+          <div class="feedback-card">
+            <h3>Feedback</h3>
+            <p id="text1">Upload and analyze videos to see feedback</p>
+          </div>
+        </div>
+        <!-- VIDEO CARD 2 -->
+        <div class="video-card">
+          <h2>Video 2</h2>
+          <video id="video2" controls></video>
+          <div class="metrics-row">
+            <div>Valence: <span id="val2">–</span></div>
+            <div>Comfort: <span id="com2">–</span></div>
+            <div>Engagement: <span id="eng2">–</span></div>
+          </div>
+          <div class="chart-container">
+            <canvas id="chart2"></canvas>
+          </div>
+          <div class="feedback-card">
+            <h3>Feedback</h3>
+            <p id="text2">Upload and analyze videos to see feedback</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="compatibility-section">
+        <div id="compatibility-score" class="compatibility-score">
+          Date Compatibility Score: --
+        </div>
+        <div id="detailed-analysis" class="detailed-analysis">
+          <h2>Compatibility Analysis</h2>
+          <p>
+            Upload and analyze videos to see detailed compatibility insights
+          </p>
+        </div>
+      </section>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  </body>
+</html>

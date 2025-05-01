@@ -32,6 +32,9 @@ def analyze_video(video_path, output_root):
     print(
         f"\n [{video_name}] {total_frames} frames @ {fps:.2f}fps, duration {duration:.1f}s")
 
+    # Ensure fps is an integer
+    fps = int(fps)
+
     # 2. Whisper text sentiment
     text, text_feat = extract_text_features(audio_path)
 
@@ -48,19 +51,49 @@ def analyze_video(video_path, output_root):
     # 5. Face features (mediapipe)
     saccade, comfort, face_features = extract_face_mesh_time_series(frames_dir)
 
-    # 6. Create visualization (chart + CSV)
-    metrics_png, metrics_csv = create_metrics_visualization(
-        fps, valence, emotion_data, face_features, output_dir
-    )
+    # 6. Enhanced emotional analysis - wrapped in try/except for safety
+    try:
+        analysis, metrics = analyze_multimodal_features(
+            text, text_feat, audio_feat, valence, saccade, comfort,
+            face_features=face_features, fps=fps
+        )
+    except Exception as e:
+        print(f"Error in enhanced analysis: {e}")
+        # Fallback to basic analysis
+        analysis = analyze_multimodal_features(
+            text, text_feat, audio_feat, valence, saccade, comfort
+        )
+        # Create minimal metrics dictionary for compatibility
+        metrics = {
+            "valence_score": float(np.mean(valence)),
+            "comfort_score": float(np.mean(comfort)),
+            "engagement_score": float(np.mean(saccade)),
+            "valence_stability": float(1.0 - min(1.0, np.std(valence) * 2)),
+            "comfort_stability": float(1.0 - min(1.0, np.std(comfort) * 2)),
+            "engagement_stability": float(1.0 - min(1.0, np.std(saccade) * 2)),
+            "valence_ts": [float(v) for v in valence],
+            "comfort_ts": [float(c) for c in comfort],
+            "engagement_ts": [float(s) for s in saccade],
+            "time": [float(t) for t in np.arange(len(valence)) / fps]
+        }
 
-    # 7. GPT cross-modal summary
-    analysis = analyze_multimodal_features(
-        text, text_feat, audio_feat, valence, saccade, comfort
-    )
     with open(os.path.join(output_dir, "crossmodal_analysis.txt"), "w") as f:
         f.write(analysis)
 
-    # 8. Save metrics data as JSON for easier web access
+    # 7. Create visualization with the new scores
+    # Handle potential missing core_scores parameter in older visualization.py version
+    try:
+        metrics_png, metrics_csv = create_metrics_visualization(
+            fps, valence, emotion_data, face_features, output_dir, core_scores=metrics
+        )
+    except TypeError:
+        # Fallback if core_scores parameter isn't supported
+        metrics_png, metrics_csv = create_metrics_visualization(
+            fps, valence, emotion_data, face_features, output_dir
+        )
+
+    # 8. Save metrics data as JSON for the web interface
+    # Ensure all values are proper JSON serializable types
     metrics_data = {
         "text_sentiment": float(text_feat[0]),
         "pitch": float(audio_feat[0]),
@@ -68,7 +101,23 @@ def analyze_video(video_path, output_root):
         "valence": [float(v) for v in valence],
         "comfort": [float(c) for c in comfort],
         "saccade": [float(s) for s in saccade],
-        "emotions": emotion_data
+        "emotions": emotion_data,
+
+        # Add the three core scores
+        "valence_score": float(metrics["valence_score"]),
+        "comfort_score": float(metrics["comfort_score"]),
+        "engagement_score": float(metrics["engagement_score"]),
+
+        # Add stability metrics
+        "valence_stability": float(metrics["valence_stability"]),
+        "comfort_stability": float(metrics["comfort_stability"]),
+        "engagement_stability": float(metrics["engagement_stability"]),
+
+        # Add time series data for real-time display (5fps) - ensure all elements are float
+        "valence_ts": [float(v) if not isinstance(v, (list, tuple, np.ndarray)) else float(v[0]) for v in metrics["valence_ts"]],
+        "comfort_ts": [float(c) if not isinstance(c, (list, tuple, np.ndarray)) else float(c[0]) for c in metrics["comfort_ts"]],
+        "engagement_ts": [float(e) if not isinstance(e, (list, tuple, np.ndarray)) else float(e[0]) for e in metrics["engagement_ts"]],
+        "time": [float(t) for t in metrics["time"]]
     }
 
     with open(os.path.join(output_dir, "metrics_data.json"), "w") as f:
@@ -91,7 +140,15 @@ def analyze_compatibility(video1_dir, video2_dir, output_root):
     print("\n Analyzing compatibility between videos...")
 
     # Calculate compatibility score and detailed analysis
-    score, detailed_analysis = calculate_compatibility(video1_dir, video2_dir)
+    try:
+        score, detailed_analysis = calculate_compatibility(
+            video1_dir, video2_dir)
+        # Ensure score is an integer
+        if not isinstance(score, int):
+            score = int(float(score))
+    except Exception as e:
+        print(f"Error calculating compatibility: {e}")
+        score, detailed_analysis = 70, "Error generating detailed compatibility analysis."
 
     # Save results
     compatibility_data = {

@@ -1,3 +1,4 @@
+from flask import render_template
 import os
 import json
 from flask import Flask, request, jsonify, send_from_directory
@@ -8,7 +9,7 @@ import threading
 from main import analyze_video, analyze_compatibility
 from analysis.crossmodal_analysis import calculate_compatibility
 
-app = Flask(__name__, static_folder='.')
+app = Flask(__name__, static_folder='static')
 
 # Configure upload folder
 UPLOAD_FOLDER = 'uploads'
@@ -31,7 +32,7 @@ def allowed_file(filename):
 
 @app.route('/')
 def index():
-    return send_from_directory('.', 'index.html')
+    return render_template('index.html')
 
 
 @app.route('/upload', methods=['POST'])
