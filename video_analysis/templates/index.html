@@ -24,7 +24,20 @@
         </p>
       </header>
 
-      <section class="upload-section">
+      <!-- Input method toggle row -->
+      <section class="method-toggle">
+        <div class="method-options">
+          <button class="method-option selected" data-method="upload">
+            Upload Videos
+          </button>
+          <button class="method-option" data-method="record">
+            Record Conversation
+          </button>
+        </div>
+      </section>
+
+      <!-- Upload Section (initially visible) -->
+      <section class="upload-section" id="upload-section">
         <div class="file-upload">
           <label for="video1-upload" class="file-label">Video 1</label>
           <input id="video1-upload" type="file" accept="video/*" />
@@ -33,7 +46,67 @@
           <label for="video2-upload" class="file-label">Video 2</label>
           <input id="video2-upload" type="file" accept="video/*" />
         </div>
-        <button id="analyze-btn" class="btn primary" disabled>Analyze</button>
+        <button id="analyze-upload-btn" class="btn primary" disabled>
+          Analyze
+        </button>
+      </section>
+
+      <!-- Recording Section (initially hidden) with two-column layout -->
+      <section
+        class="recording-section"
+        id="recording-section"
+        style="display: none"
+      >
+        <div class="recording-grid">
+          <!-- Left column - Person 1 -->
+          <div class="recording-column">
+            <h3>Person 1</h3>
+            <video id="recording1" autoplay muted></video>
+            <div class="recording-controls">
+              <button id="start-recording1" class="btn secondary">Start</button>
+              <button id="stop-recording1" class="btn secondary" disabled>
+                Stop
+              </button>
+              <span class="recording-timer" id="timer1">00:00</span>
+            </div>
+          </div>
+
+          <!-- Right column - Person 2 -->
+          <div class="recording-column">
+            <h3>Person 2</h3>
+            <video id="recording2" autoplay muted></video>
+            <div class="recording-controls">
+              <button id="start-recording2" class="btn secondary">Start</button>
+              <button id="stop-recording2" class="btn secondary" disabled>
+                Stop
+              </button>
+              <span class="recording-timer" id="timer2">00:00</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Center controls -->
+        <div class="recording-center-controls">
+          <button id="record-both-btn" class="btn secondary">
+            Record Both
+          </button>
+          <button id="video-chat-btn" class="btn secondary">
+            Start Video Chat
+          </button>
+          <button id="analyze-recording-btn" class="btn primary" disabled>
+            Analyze
+          </button>
+        </div>
+
+        <!-- Room ID container for video chat -->
+        <div class="room-id-container" style="display: none">
+          <input type="text" id="room-id" placeholder="Enter room ID to join" />
+          <button id="join-room-btn" class="btn secondary">Join</button>
+          <button id="create-room-btn" class="btn secondary">
+            Create New Room
+          </button>
+          <div id="room-info"></div>
+        </div>
       </section>
 
       <section class="sync-controls">
@@ -54,14 +127,13 @@
         <div id="status-indicator" class="status-indicator"></div>
       </section>
 
-      <!-- ADD RADAR CHART SECTION HERE - above the videos -->
-      <section class="radar-section">
+      <section class="radar-section" id="radar-section">
         <div class="radar-container">
           <h2>Emotional Metrics Comparison</h2>
           <div class="radar-chart-container">
             <canvas id="radar-chart"></canvas>
           </div>
-          <!-- <div class="radar-legend">
+          <div class="radar-legend">
             <div class="legend-item person1">
               <span class="legend-color"></span>
               <span class="legend-label">Person 1</span>
@@ -70,11 +142,12 @@
               <span class="legend-color"></span>
               <span class="legend-label">Person 2</span>
             </div>
-          </div> -->
+          </div>
         </div>
       </section>
 
-      <section class="videos-grid">
+      <!-- Videos Grid - Always visible -->
+      <section class="videos-grid" id="videos-grid">
         <!-- VIDEO CARD 1 -->
         <div class="video-card">
           <h2>Video 1</h2>
@@ -137,7 +210,7 @@
         </div>
       </section>
 
-      <section class="compatibility-section">
+      <section class="compatibility-section" id="compatibility-section">
         <div id="compatibility-score" class="compatibility-score">
           Date Compatibility Score: --
         </div>
@@ -151,6 +224,9 @@
       </section>
     </div>
 
+    <!-- Add WebRTC scripts for video chat -->
+    <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
   </body>
 </html>

@@ -16,19 +16,34 @@ from analysis.crossmodal_analysis import analyze_multimodal_features, calculate_
 def analyze_video(video_path, output_root):
     """
     Analyze a single video and extract multimodal emotion features
+
+    Args:
+        video_path: Path to the video file
+        output_root: Root output directory (could be a timestamped folder)
+
+    Returns:
+        str: Path to the video's output directory
     """
     # Get video filename without extension
     video_name = os.path.splitext(os.path.basename(video_path))[0]
-    output_dir = os.path.join(output_root, video_name)
+
+    # Check if we're already in a timestamped folder
+    if os.path.basename(output_root).startswith('output_'):
+        # We're in a timestamped folder, so just use the video subdirectory
+        output_dir = os.path.join(output_root, video_name)
+    else:
+        # Use the original path construction
+        output_dir = os.path.join(output_root, video_name)
+
     os.makedirs(output_dir, exist_ok=True)
 
     # Set output paths
     audio_path = os.path.join(output_dir, "audio.wav")
     frames_dir = os.path.join(output_dir, "frames")
 
-    # 1. Extract frames & audio
+    # 1. Extract frames & audio at 5 FPS
     total_frames, fps, duration = extract_audio_and_frames(
-        video_path, audio_path, frames_dir)
+        video_path, audio_path, frames_dir, target_fps=5)
     print(
         f"\n [{video_name}] {total_frames} frames @ {fps:.2f}fps, duration {duration:.1f}s")
 
@@ -119,19 +134,6 @@ def analyze_video(video_path, output_root):
         "engagement_ts": [float(e) if not isinstance(e, (list, tuple, np.ndarray)) else float(e[0]) for e in metrics["engagement_ts"]],
         "time": [float(t) for t in metrics["time"]]
     }
-
-    # Print some statistics for debugging
-    print(f"\nMetrics Statistics:")
-    print(f"  Valence Score: {metrics_data['valence_score']:.2f}")
-    print(f"  Comfort Score: {metrics_data['comfort_score']:.2f}")
-    print(f"  Engagement Score: {metrics_data['engagement_score']:.2f}")
-    print(f"  Time Series Length: {len(metrics_data['time'])}")
-    print(
-        f"  Valence TS Range: {min(metrics_data['valence_ts']):.2f} to {max(metrics_data['valence_ts']):.2f}")
-    print(
-        f"  Comfort TS Range: {min(metrics_data['comfort_ts']):.2f} to {max(metrics_data['comfort_ts']):.2f}")
-    print(
-        f"  Engagement TS Range: {min(metrics_data['engagement_ts']):.2f} to {max(metrics_data['engagement_ts']):.2f}")
 
     with open(os.path.join(output_dir, "metrics_data.json"), "w") as f:
         json.dump(metrics_data, f)
