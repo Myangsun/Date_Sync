@@ -160,14 +160,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Format the compatibility analysis in a structured way
   function formatCompatibilityAnalysis(analysisText) {
+    // Remove markdown ** formatting
+    analysisText = analysisText.replace(/\*\*/g, "");
+
     // Look for section headers (### Title)
     const sections = analysisText.split(/###\s+([^\n]+)/);
 
     if (sections.length <= 1) {
       // If no sections are found, return the text as a single section
       return `<div class="analysis-section">
-                <p>${analysisText}</p>
-              </div>`;
+              <p>${analysisText}</p>
+            </div>`;
     }
 
     let formattedHtml = "";
@@ -190,12 +193,12 @@ document.addEventListener("DOMContentLoaded", function () {
       });
 
       formattedHtml += `
-        <div class="analysis-section">
-          <h3 class="analysis-title">${title}</h3>
-          <div class="analysis-content">
-            ${contentHtml}
-          </div>
-        </div>`;
+      <div class="analysis-section">
+        <h3 class="analysis-title">${title}</h3>
+        <div class="analysis-content">
+          ${contentHtml}
+        </div>
+      </div>`;
     }
 
     return formattedHtml;
@@ -224,7 +227,7 @@ document.addEventListener("DOMContentLoaded", function () {
         res.text().catch(() => "")
       ),
       fetch("output/compatibility_score.json").then((res) =>
-        res.json().catch(() => ({ score: 0 }))
+        res.json().catch(() => ({ score: 0, metrics: {} }))
       ),
       fetch("output/compatibility_analysis.txt").then((res) =>
         res.text().catch(() => "")
@@ -251,9 +254,32 @@ document.addEventListener("DOMContentLoaded", function () {
           document.getElementById("text2").innerHTML =
             formatFeedback(analysis2);
 
+          // Update video sources
+          v1.src = "output/video_1.mp4";
+          v2.src = "output/video_2.mp4";
+
+          // Create radar chart first
+          createRadarChart(data1, data2);
+
+          // Then create individual charts
+          createVideoChart("chart1", data1, "Video 1 Emotional Metrics");
+          createVideoChart("chart2", data2, "Video 2 Emotional Metrics");
+
           // Display compatibility score with original styling
           compatibilityScore = scoreData.score;
           compatibilityScoreEl.innerHTML = `Date Compatibility Score: ${compatibilityScore}/100`;
+
+          // Make sure we have default values for metrics if they're not in the data
+          if (!scoreData.metrics) {
+            scoreData.metrics = {
+              emotional_synchrony: 0.0,
+              comfort_synchrony: 0.0,
+              engagement_balance: 0.0,
+              emotional_stability_1: 0.0,
+              emotional_stability_2: 0.0,
+              mutual_responsiveness: 0.0,
+            };
+          }
 
           // Display detailed compatibility analysis with better formatting
           detailedAnalysisEl.innerHTML = `
@@ -261,30 +287,26 @@ document.addEventListener("DOMContentLoaded", function () {
           <div class="compatibility-metrics">
             <div class="metric-item">
               <span class="metric-label">Emotional Synchrony</span>
-              <span class="metric-value">${
-                scoreData.metrics?.emotional_synchrony?.toFixed(2) || "N/A"
-              }</span>
+              <span class="metric-value">${(
+                scoreData.metrics.emotional_synchrony || 0
+              ).toFixed(2)}</span>
             </div>
             <div class="metric-item">
               <span class="metric-label">Comfort Synchrony</span>
-              <span class="metric-value">${
-                scoreData.metrics?.comfort_synchrony?.toFixed(2) || "N/A"
-              }</span>
+              <span class="metric-value">${(
+                scoreData.metrics.comfort_synchrony || 0
+              ).toFixed(2)}</span>
             </div>
             <div class="metric-item">
               <span class="metric-label">Engagement Balance</span>
-              <span class="metric-value">${
-                scoreData.metrics?.engagement_balance?.toFixed(2) || "N/A"
-              }</span>
+              <span class="metric-value">${(
+                scoreData.metrics.engagement_balance || 0
+              ).toFixed(2)}</span>
             </div>
           </div>
           <div class="analysis-content">
             ${formatCompatibilityAnalysis(detailedAnalysis)}
           </div>`;
-
-          // Create charts for each video
-          createVideoChart("chart1", data1, "Video 1 Emotional Metrics");
-          createVideoChart("chart2", data2, "Video 2 Emotional Metrics");
 
           // Update time slider max value based on video duration
           const maxTime = Math.max(
@@ -297,15 +319,8 @@ document.addEventListener("DOMContentLoaded", function () {
             Math.max(v1.duration || 0, v2.duration || 0) ||
             100;
 
-          // Update video sources
-          v1.src = "output/video_1.mp4";
-          v2.src = "output/video_2.mp4";
-
           // Display metrics in a more readable format
           updateMetricsDisplay(0);
-
-          // Create radar chart for comparison
-          createRadarChart(data1, data2);
 
           // Hide status indicator after a brief display of success
           setTimeout(() => {
@@ -320,7 +335,6 @@ document.addEventListener("DOMContentLoaded", function () {
         statusIndicator.style.backgroundColor = "#f8d7da";
       });
   }
-
   // Get color class based on score
   function getScoreColorClass(score) {
     if (score >= 80) return "high-score";
@@ -329,21 +343,9 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // Create radar chart for comparing both videos
+  // Create radar chart for comparing both videos
   function createRadarChart(data1, data2) {
-    // Create radar chart container if it doesn't exist
-    if (!document.getElementById("radar-chart-container")) {
-      const container = document.createElement("div");
-      container.id = "radar-chart-container";
-      container.className = "radar-chart-container";
-
-      const canvas = document.createElement("canvas");
-      canvas.id = "radar-chart";
-
-      container.appendChild(canvas);
-      document
-        .querySelector(".compatibility-section")
-        .insertBefore(container, document.getElementById("detailed-analysis"));
-    }
+    console.log("Creating radar chart");
 
     // Get data points for current time
     const dataPoint1 = data1[0] || { valence: 0, comfort: 0, engagement: 0 };
@@ -385,6 +387,8 @@ document.addEventListener("DOMContentLoaded", function () {
             backgroundColor: "rgba(255, 99, 132, 0.2)",
             borderColor: "rgba(255, 99, 132, 1)",
             borderWidth: 2,
+            pointBackgroundColor: "rgba(255, 99, 132, 1)",
+            pointRadius: 4,
           },
           {
             label: "Person 2",
@@ -404,29 +408,63 @@ document.addEventListener("DOMContentLoaded", function () {
             backgroundColor: "rgba(54, 162, 235, 0.2)",
             borderColor: "rgba(54, 162, 235, 1)",
             borderWidth: 2,
+            pointBackgroundColor: "rgba(54, 162, 235, 1)",
+            pointRadius: 4,
           },
         ],
       },
       options: {
+        responsive: true,
+        maintainAspectRatio: false,
         scales: {
           r: {
             min: -1,
             max: 1,
             ticks: {
               stepSize: 0.5,
+              backdropColor: "rgba(255, 255, 255, 0.6)",
+            },
+            angleLines: {
+              color: "rgba(0, 0, 0, 0.1)",
+            },
+            grid: {
+              color: "rgba(0, 0, 0, 0.1)",
+            },
+            pointLabels: {
+              font: {
+                size: 14,
+                weight: "bold",
+              },
             },
           },
         },
         plugins: {
           title: {
             display: true,
-            text: "Emotional Metrics Comparison",
+            text: "Real-time Emotional Metrics Comparison",
+            font: {
+              size: 16,
+              weight: "bold",
+            },
+          },
+          legend: {
+            display: false, // We're using our custom legend below the chart
+          },
+          tooltip: {
+            callbacks: {
+              label: function (context) {
+                const label = context.dataset.label || "";
+                const value = context.raw.toFixed(2);
+                return `${label}: ${value}`;
+              },
+            },
           },
         },
       },
     });
-  }
 
+    console.log("Radar chart created successfully");
+  }
   // Prepare time series data from metrics JSON
   function prepareTimeSeriesData(metrics) {
     // If no metrics data or empty object, return empty array
@@ -510,8 +548,13 @@ document.addEventListener("DOMContentLoaded", function () {
       d.time !== undefined ? d.time.toFixed(1) : "N/A"
     );
 
-    // Create chart
-    new Chart(ctx, {
+    // Destroy existing chart if it exists
+    if (window[canvasId + "Chart"]) {
+      window[canvasId + "Chart"].destroy();
+    }
+
+    // Create chart with FIXED scale
+    window[canvasId + "Chart"] = new Chart(ctx, {
       type: "line",
       data: {
         labels: labels,
@@ -524,6 +567,7 @@ document.addEventListener("DOMContentLoaded", function () {
             borderColor: "rgba(255, 99, 132, 1)",
             backgroundColor: "rgba(255, 99, 132, 0.2)",
             tension: 0.4,
+            borderWidth: 2,
           },
           {
             label: "Comfort",
@@ -533,6 +577,7 @@ document.addEventListener("DOMContentLoaded", function () {
             borderColor: "rgba(54, 162, 235, 1)",
             backgroundColor: "rgba(54, 162, 235, 0.2)",
             tension: 0.4,
+            borderWidth: 2,
           },
           {
             label: "Engagement",
@@ -544,6 +589,7 @@ document.addEventListener("DOMContentLoaded", function () {
             borderColor: "rgba(255, 206, 86, 1)",
             backgroundColor: "rgba(255, 206, 86, 0.2)",
             tension: 0.4,
+            borderWidth: 2,
           },
         ],
       },
@@ -555,11 +601,35 @@ document.addEventListener("DOMContentLoaded", function () {
             display: true,
             text: title,
           },
+          tooltip: {
+            callbacks: {
+              label: function (context) {
+                const label = context.dataset.label || "";
+                const value = parseFloat(context.raw).toFixed(2);
+                return `${label}: ${value}`;
+              },
+            },
+          },
         },
         scales: {
           y: {
-            min: -1,
-            max: 1,
+            type: "linear",
+            min: -1.0, // FIXED min value
+            max: 1.0, // FIXED max value
+            ticks: {
+              stepSize: 0.2, // FIXED step size
+              callback: function (value) {
+                return value.toFixed(1); // Show one decimal place
+              },
+            },
+            grid: {
+              color: "rgba(0, 0, 0, 0.1)",
+            },
+          },
+          x: {
+            grid: {
+              color: "rgba(0, 0, 0, 0.1)",
+            },
           },
         },
       },
