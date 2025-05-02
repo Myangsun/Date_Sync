@@ -57,42 +57,41 @@
         id="recording-section"
         style="display: none"
       >
-        <div class="recording-grid">
-          <!-- Left column - Person 1 -->
-          <div class="recording-column">
-            <h3>Person 1</h3>
+        <div class="videos-grid">
+          <!-- VIDEO CARD 1 for recording -->
+          <div class="video-card">
+            <h2>Person 1</h2>
             <video id="recording1" autoplay muted></video>
-            <div class="recording-controls">
-              <button id="start-recording1" class="btn secondary">Start</button>
-              <button id="stop-recording1" class="btn secondary" disabled>
-                Stop
-              </button>
-              <span class="recording-timer" id="timer1">00:00</span>
+            <div class="metrics-container">
+              <div class="recording-info">
+                <span class="recording-status" id="status1">Ready</span>
+              </div>
             </div>
           </div>
-
-          <!-- Right column - Person 2 -->
-          <div class="recording-column">
-            <h3>Person 2</h3>
+          <!-- VIDEO CARD 2 for recording -->
+          <div class="video-card">
+            <h2>Person 2</h2>
             <video id="recording2" autoplay muted></video>
-            <div class="recording-controls">
-              <button id="start-recording2" class="btn secondary">Start</button>
-              <button id="stop-recording2" class="btn secondary" disabled>
-                Stop
-              </button>
-              <span class="recording-timer" id="timer2">00:00</span>
+            <div class="metrics-container">
+              <div class="recording-info">
+                <span class="recording-status" id="status2"
+                  >Waiting for connection</span
+                >
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Center controls -->
+        <!-- Recording controls -->
         <div class="recording-center-controls">
-          <button id="record-both-btn" class="btn secondary">
-            Record Both
-          </button>
           <button id="video-chat-btn" class="btn secondary">
-            Start Video Chat
+            Enter Video Chat
           </button>
+          <button id="record-btn" class="btn primary">Record</button>
+          <button id="stop-recording-btn" class="btn primary" disabled>
+            Stop Recording
+          </button>
+          <span class="recording-timer" id="record-timer">00:00</span>
           <button id="analyze-recording-btn" class="btn primary" disabled>
             Analyze
           </button>

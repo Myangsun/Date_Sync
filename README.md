@@ -14,3 +14,12 @@
 ```python
 python app.py
 ```
+
+## Get access with URL
+
+Install localtunnel: npm install -g localtunnel
+Start your Flask application
+In a separate terminal, run:
+lt --port 8080
+
+Share the provided URL

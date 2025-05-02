@@ -18,6 +18,11 @@ let recordedChunks2 = [];
 let recordingTimers = [null, null];
 let recordingTimes = [0, 0];
 
+// Global recording control variables
+let recordBtn = null;
+let stopRecordingBtn = null;
+let isRecording = false;
+
 // WebRTC variables
 let localStream = null;
 let peerConnection = null;
@@ -41,6 +46,9 @@ document.addEventListener("DOMContentLoaded", function () {
   // Initialize UI elements
   initUI();
 
+  // Show initial visualizations
+  showInitialVisualizations();
+
   // Initialize method toggle functionality
   initializeMethodToggle();
 
@@ -48,7 +56,7 @@ document.addEventListener("DOMContentLoaded", function () {
   initializeEmptyCharts();
 
   // Check for previous analysis results
-  checkForPreviousResults();
+  // checkForPreviousResults();
 
   // Set up event listeners for all UI interactions
   setupEventListeners();
@@ -72,6 +80,32 @@ function initUI() {
       element.style.display = "none";
     }
   });
+
+  // Reset any text elements to default values
+  const text1 = document.getElementById("text1");
+  const text2 = document.getElementById("text2");
+  if (text1) text1.innerHTML = "Upload and analyze videos to see feedback";
+  if (text2) text2.innerHTML = "Upload and analyze videos to see feedback";
+
+  const compatibilityScoreEL = document.getElementById("compatibility-score");
+  if (compatibilityScoreEL)
+    compatibilityScoreEL.innerHTML = "Date Compatibility Score: --";
+
+  const detailedAnalysis = document.getElementById("detailed-analysis");
+  if (detailedAnalysis) {
+    detailedAnalysis.innerHTML = `
+      <h2>Compatibility Analysis</h2>
+      <p>Upload and analyze videos to see detailed compatibility insights</p>
+    `;
+  }
+}
+
+// Add this function to show empty visualizations immediately
+function showInitialVisualizations() {
+  // Show all visualization sections by default
+  document.getElementById("radar-section").style.display = "block";
+  document.getElementById("videos-grid").style.display = "grid";
+  document.getElementById("compatibility-section").style.display = "block";
 }
 
 // Initialize empty charts for initial display
@@ -134,6 +168,58 @@ function setupEventListeners() {
   const stopRecording2 = document.getElementById("stop-recording2");
   const recordBothBtn = document.getElementById("record-both-btn");
   const analyzeRecordingBtn = document.getElementById("analyze-recording-btn");
+
+  // New global recording buttons
+  recordBtn = document.getElementById("record-btn");
+  stopRecordingBtn = document.getElementById("stop-recording-btn");
+
+  if (recordBtn && stopRecordingBtn) {
+    recordBtn.addEventListener("click", function () {
+      if (stream1 && stream2) {
+        startRecordingSession(1);
+        startRecordingSession(2);
+
+        recordBtn.disabled = true;
+        stopRecordingBtn.disabled = false;
+        isRecording = true;
+
+        const status1 = document.getElementById("status1");
+        const status2 = document.getElementById("status2");
+        if (status1) status1.textContent = "Recording";
+        if (status2) status2.textContent = "Recording";
+
+        const recordingSection = document.querySelector(".videos-grid");
+        if (recordingSection) recordingSection.classList.add("recording");
+
+        startRecordingTimer(0);
+      } else {
+        alert("Please establish video chat connection first.");
+      }
+    });
+
+    stopRecordingBtn.addEventListener("click", function () {
+      stopRecordingSession(1);
+      stopRecordingSession(2);
+
+      recordBtn.disabled = false;
+      stopRecordingBtn.disabled = true;
+      isRecording = false;
+
+      const status1 = document.getElementById("status1");
+      const status2 = document.getElementById("status2");
+      if (status1) status1.textContent = "Ready";
+      if (status2) status2.textContent = "Ready";
+
+      const recordingSection = document.querySelector(".videos-grid");
+      if (recordingSection) recordingSection.classList.remove("recording");
+
+      stopRecordingTimer(0);
+
+      if (recordedChunks1.length > 0 && recordedChunks2.length > 0) {
+        if (analyzeRecordingBtn) analyzeRecordingBtn.disabled = false;
+      }
+    });
+  }
 
   // Video playback elements
   const timeSlider = document.getElementById("time-slider");
@@ -247,33 +333,60 @@ function setupEventListeners() {
     });
 
     // Record both at the same time
-    recordBothBtn.addEventListener("click", function () {
-      if (recordBothBtn.textContent === "Record Both") {
-        // Start recording both
-        if (stream1 && stream2) {
+    // Add this debugging code to the record button event listener
+    if (recordBtn) {
+      recordBtn.addEventListener("click", function () {
+        console.log("Record button clicked");
+        console.log("Stream1 exists:", !!stream1);
+        console.log("Stream2 exists:", !!stream2);
+
+        // Check if streams exist before trying to record
+        if (!stream1) {
+          console.error("Stream1 is not initialized");
+          alert(
+            "Local camera stream is not initialized. Please check camera permissions."
+          );
+          return;
+        }
+
+        if (!stream2) {
+          console.error("Stream2 is not initialized");
+          alert(
+            "Remote stream is not available. Please establish a video chat connection first."
+          );
+          return;
+        }
+
+        try {
+          // Start recording both streams
+          console.log("Attempting to start recording...");
           startRecordingSession(1);
           startRecordingSession(2);
 
-          startRecording1.disabled = true;
-          stopRecording1.disabled = false;
-          startRecording2.disabled = true;
-          stopRecording2.disabled = false;
+          // Update UI
+          recordBtn.disabled = true;
+          stopRecordingBtn.disabled = false;
+          isRecording = true;
 
-          recordBothBtn.textContent = "Stop Both";
+          // Update status texts
+          const status1 = document.getElementById("status1");
+          const status2 = document.getElementById("status2");
+          if (status1) status1.textContent = "Recording";
+          if (status2) status2.textContent = "Recording";
+
+          // Add recording indicator class
+          const recordingSection = document.querySelector(".videos-grid");
+          if (recordingSection) recordingSection.classList.add("recording");
+
+          // Start recording timer
+          startRecordingTimer(0);
+          console.log("Recording started successfully");
+        } catch (error) {
+          console.error("Error starting recording:", error);
+          alert("Error starting recording: " + error.message);
         }
-      } else {
-        // Stop recording both
-        stopRecordingSession(1);
-        stopRecordingSession(2);
-
-        startRecording1.disabled = false;
-        stopRecording1.disabled = true;
-        startRecording2.disabled = false;
-        stopRecording2.disabled = true;
-
-        recordBothBtn.textContent = "Record Both";
-      }
-    });
+      });
+    }
   }
 
   // Handle analyze button for recordings
@@ -290,13 +403,37 @@ function setupEventListeners() {
 
   // Handle form submission for uploaded videos
   if (analyzeUploadBtn) {
+    console.log("Found analyze upload button:", analyzeUploadBtn); // Add debug
     analyzeUploadBtn.addEventListener("click", function () {
-      if (video1Upload.files.length === 0 || video2Upload.files.length === 0) {
+      console.log("Analyze button clicked"); // Add debug
+
+      // Get the file inputs directly when clicked
+      const video1Upload = document.getElementById("video1-upload");
+      const video2Upload = document.getElementById("video2-upload");
+
+      console.log(
+        "Files found:",
+        video1Upload?.files?.length,
+        video2Upload?.files?.length
+      );
+
+      if (
+        !video1Upload ||
+        !video2Upload ||
+        video1Upload.files.length === 0 ||
+        video2Upload.files.length === 0
+      ) {
         alert("Please upload both videos before analyzing.");
         return;
       }
 
-      uploadAndAnalyzeUploads(video1Upload.files[0], video2Upload.files[0]);
+      try {
+        // Call the upload function directly
+        uploadAndAnalyzeUploads(video1Upload.files[0], video2Upload.files[0]);
+      } catch (error) {
+        console.error("Error in uploadAndAnalyzeUploads:", error);
+        alert("Error starting analysis: " + error.message);
+      }
     });
   }
 
@@ -375,9 +512,78 @@ function setupEventListeners() {
 // ======================================
 // UPLOADING AND ANALYSIS
 // ======================================
+// Add a helper function to clear charts
+function clearCharts() {
+  // Destroy existing charts to prevent duplicates
+  if (window.radarChart) {
+    window.radarChart.destroy();
+    window.radarChart = null;
+  }
+
+  if (window.chart1Chart) {
+    window.chart1Chart.destroy();
+    window.chart1Chart = null;
+  }
+
+  if (window.chart2Chart) {
+    window.chart2Chart.destroy();
+    window.chart2Chart = null;
+  }
+
+  // Reset all data
+  data1 = [];
+  data2 = [];
+  compatibilityScore = 0;
+
+  // Reset video elements
+  const v1 = document.getElementById("video1");
+  const v2 = document.getElementById("video2");
+  if (v1) v1.src = "";
+  if (v2) v2.src = "";
+
+  // Reset text elements
+  const text1 = document.getElementById("text1");
+  const text2 = document.getElementById("text2");
+  if (text1) text1.innerHTML = "Analysis in progress...";
+  if (text2) text2.innerHTML = "Analysis in progress...";
+
+  const compatibilityScoreEL = document.getElementById("compatibility-score");
+  if (compatibilityScoreEL)
+    compatibilityScoreEL.innerHTML = "Date Compatibility Score: --";
+
+  const detailedAnalysis = document.getElementById("detailed-analysis");
+  if (detailedAnalysis) {
+    detailedAnalysis.innerHTML = `
+      <h2>Compatibility Analysis</h2>
+      <p>Analysis in progress...</p>
+    `;
+  }
+}
+
+// Function to hide result sections
+function hideResultSections() {
+  const sectionsToHide = [
+    "radar-section",
+    "videos-grid",
+    "compatibility-section",
+  ];
+
+  sectionsToHide.forEach((id) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.style.display = "none";
+    }
+  });
+}
 
 // Upload and analyze recorded videos
 function uploadAndAnalyzeRecordings() {
+  // Clear any previous analysis results
+  clearCharts();
+
+  // Hide result sections - THIS WAS MISSING
+  hideResultSections();
+
   const statusIndicator = document.getElementById("status-indicator");
 
   // Show status indicator
@@ -408,11 +614,98 @@ function uploadAndAnalyzeRecordings() {
   formData.append("video2", file2);
 
   // Upload videos to server
-  uploadVideosAndPollStatus(formData);
+  // Do NOT call clearCharts and hideResultSections again inside this function
+  try {
+    fetch("/upload", {
+      method: "POST",
+      body: formData,
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("Upload successful:", data);
+        if (progressBar) progressBar.style.width = "30%";
+
+        // Start polling for status
+        pollUntilComplete();
+      })
+      .catch((error) => {
+        console.error("Error uploading videos:", error);
+        statusIndicator.innerHTML = "Error uploading videos. Please try again.";
+        statusIndicator.style.backgroundColor = "#f8d7da";
+      });
+  } catch (err) {
+    console.error("Error in fetch operation:", err);
+    statusIndicator.innerHTML = "Error: " + err.message;
+    statusIndicator.style.backgroundColor = "#f8d7da";
+  }
+
+  // Function to continuously poll until analysis is complete
+  function pollUntilComplete() {
+    const statusInterval = setInterval(() => {
+      fetch("/status")
+        .then((res) => res.json())
+        .then((statusData) => {
+          console.log("Status update:", statusData);
+
+          // Update progress bar
+          if (progressBar) progressBar.style.width = statusData.progress + "%";
+
+          // Update status message based on progress
+          if (statusData.progress < 50) {
+            statusIndicator.innerHTML = `Analyzing videos (${statusData.progress}%)... This may take several minutes.`;
+            statusIndicator.innerHTML +=
+              '<div class="progress-bar"><div class="progress" id="progress-bar" style="width: ' +
+              statusData.progress +
+              '%;"></div></div>';
+          } else if (statusData.progress < 90) {
+            statusIndicator.innerHTML = `Calculating compatibility (${statusData.progress}%)...`;
+            statusIndicator.innerHTML +=
+              '<div class="progress-bar"><div class="progress" id="progress-bar" style="width: ' +
+              statusData.progress +
+              '%;"></div></div>';
+          } else {
+            statusIndicator.innerHTML = `Finishing up (${statusData.progress}%)...`;
+            statusIndicator.innerHTML +=
+              '<div class="progress-bar"><div class="progress" id="progress-bar" style="width: ' +
+              statusData.progress +
+              '%;"></div></div>';
+          }
+
+          // Check if processing is complete
+          if (statusData.status === "completed") {
+            clearInterval(statusInterval);
+            console.log(
+              "Analysis completed, loading new results from:",
+              statusData.output_folder
+            );
+
+            // Only now load the results - AFTER the analysis is confirmed complete
+            loadLatestResults(statusData.output_folder);
+
+            // Update UI
+            statusIndicator.style.display = "none";
+          } else if (statusData.status === "error") {
+            clearInterval(statusInterval);
+            statusIndicator.innerHTML =
+              "Error during analysis: " + statusData.message;
+            statusIndicator.style.backgroundColor = "#f8d7da";
+          }
+        })
+        .catch((err) => {
+          console.error("Error checking status:", err);
+        });
+    }, 2000); // Check every 2 seconds
+  }
 }
 
 // Upload and analyze uploaded videos
 function uploadAndAnalyzeUploads(file1, file2) {
+  // Clear any previous analysis results
+  clearCharts();
+
+  // Hide result sections
+  hideResultSections();
+
   const statusIndicator = document.getElementById("status-indicator");
 
   // Show status indicator
@@ -435,6 +728,7 @@ function uploadAndAnalyzeUploads(file1, file2) {
 }
 
 // Common function to upload videos and poll status
+// Modify the uploadVideosAndPollStatus function to wait for completion
 function uploadVideosAndPollStatus(formData) {
   const statusIndicator = document.getElementById("status-indicator");
   const progressBar = document.getElementById("progress-bar");
@@ -449,60 +743,126 @@ function uploadVideosAndPollStatus(formData) {
       console.log("Upload successful:", data);
       if (progressBar) progressBar.style.width = "30%";
 
-      // Start polling for status
-      const statusInterval = setInterval(() => {
-        fetch("/status")
-          .then((res) => res.json())
-          .then((statusData) => {
-            // Update progress bar
-            if (progressBar)
-              progressBar.style.width = statusData.progress + "%";
-
-            // Update status message based on progress
-            if (statusData.progress < 50) {
-              statusIndicator.innerHTML = `Analyzing videos (${statusData.progress}%)... This may take several minutes.`;
-              statusIndicator.innerHTML +=
-                '<div class="progress-bar"><div class="progress" id="progress-bar" style="width: ' +
-                statusData.progress +
-                '%;"></div></div>';
-            } else if (statusData.progress < 90) {
-              statusIndicator.innerHTML = `Calculating compatibility (${statusData.progress}%)...`;
-              statusIndicator.innerHTML +=
-                '<div class="progress-bar"><div class="progress" id="progress-bar" style="width: ' +
-                statusData.progress +
-                '%;"></div></div>';
-            } else {
-              statusIndicator.innerHTML = `Finishing up (${statusData.progress}%)...`;
-              statusIndicator.innerHTML +=
-                '<div class="progress-bar"><div class="progress" id="progress-bar" style="width: ' +
-                statusData.progress +
-                '%;"></div></div>';
-            }
-
-            // Check if processing is complete
-            if (statusData.status === "completed") {
-              clearInterval(statusInterval);
-              loadResults();
-              statusIndicator.style.display = "none";
-
-              // Show visualization sections
-              showVisualizationSections();
-            } else if (statusData.status === "error") {
-              clearInterval(statusInterval);
-              statusIndicator.innerHTML =
-                "Error during analysis: " + statusData.message;
-              statusIndicator.style.backgroundColor = "#f8d7da";
-            }
-          })
-          .catch((err) => {
-            console.error("Error checking status:", err);
-          });
-      }, 2000); // Check every 2 seconds
+      // Start polling for status - use a continuous polling approach
+      pollUntilComplete();
     })
     .catch((error) => {
       console.error("Error uploading videos:", error);
       statusIndicator.innerHTML = "Error uploading videos. Please try again.";
       statusIndicator.style.backgroundColor = "#f8d7da";
+    });
+
+  // Function to continuously poll until analysis is complete
+  function pollUntilComplete() {
+    const statusInterval = setInterval(() => {
+      fetch("/status")
+        .then((res) => res.json())
+        .then((statusData) => {
+          // Update progress bar
+          if (progressBar) progressBar.style.width = statusData.progress + "%";
+
+          // Update status message based on progress
+          if (statusData.progress < 50) {
+            statusIndicator.innerHTML = `Analyzing videos (${statusData.progress}%)... This may take several minutes.`;
+            statusIndicator.innerHTML +=
+              '<div class="progress-bar"><div class="progress" id="progress-bar" style="width: ' +
+              statusData.progress +
+              '%;"></div></div>';
+          } else if (statusData.progress < 90) {
+            statusIndicator.innerHTML = `Calculating compatibility (${statusData.progress}%)...`;
+            statusIndicator.innerHTML +=
+              '<div class="progress-bar"><div class="progress" id="progress-bar" style="width: ' +
+              statusData.progress +
+              '%;"></div></div>';
+          } else {
+            statusIndicator.innerHTML = `Finishing up (${statusData.progress}%)...`;
+            statusIndicator.innerHTML +=
+              '<div class="progress-bar"><div class="progress" id="progress-bar" style="width: ' +
+              statusData.progress +
+              '%;"></div></div>';
+          }
+
+          // Check if processing is complete
+          if (statusData.status === "completed") {
+            clearInterval(statusInterval);
+
+            // Only now load the results - AFTER the analysis is confirmed complete
+            loadLatestResults(statusData.output_folder);
+
+            // Update UI
+            statusIndicator.style.display = "none";
+          } else if (statusData.status === "error") {
+            clearInterval(statusInterval);
+            statusIndicator.innerHTML =
+              "Error during analysis: " + statusData.message;
+            statusIndicator.style.backgroundColor = "#f8d7da";
+          }
+        })
+        .catch((err) => {
+          console.error("Error checking status:", err);
+        });
+    }, 2000); // Check every 2 seconds
+  }
+}
+
+function loadLatestResults(outputFolder) {
+  console.log("Loading latest results from:", outputFolder);
+
+  // Show visualization sections now
+  showVisualizationSections();
+
+  if (!outputFolder) {
+    console.error("No output folder specified");
+    return;
+  }
+
+  const folderName = outputFolder.split("/").pop(); // Get the last part of the path
+
+  // Fetch all the required data with cache-busting timestamps
+  const timestamp = new Date().getTime();
+
+  Promise.all([
+    fetch(`output/${folderName}/video_1/metrics_data.json?t=${timestamp}`).then(
+      (res) => res.json().catch(() => ({}))
+    ),
+    fetch(`output/${folderName}/video_2/metrics_data.json?t=${timestamp}`).then(
+      (res) => res.json().catch(() => ({}))
+    ),
+    fetch(
+      `output/${folderName}/video_1/crossmodal_analysis.txt?t=${timestamp}`
+    ).then((res) => res.text().catch(() => "")),
+    fetch(
+      `output/${folderName}/video_2/crossmodal_analysis.txt?t=${timestamp}`
+    ).then((res) => res.text().catch(() => "")),
+    fetch(`output/${folderName}/compatibility_score.json?t=${timestamp}`).then(
+      (res) => res.json().catch(() => ({ score: 0, metrics: {} }))
+    ),
+    fetch(
+      `output/${folderName}/compatibility_analysis.txt?t=${timestamp}`
+    ).then((res) => res.text().catch(() => "")),
+  ])
+    .then(
+      ([
+        metrics1,
+        metrics2,
+        analysis1,
+        analysis2,
+        scoreData,
+        detailedAnalysis,
+      ]) => {
+        processLoadedData(
+          metrics1,
+          metrics2,
+          analysis1,
+          analysis2,
+          scoreData,
+          detailedAnalysis,
+          folderName
+        );
+      }
+    )
+    .catch((err) => {
+      console.error("Error loading analysis results:", err);
     });
 }
 
@@ -523,36 +883,6 @@ function showVisualizationSections() {
       }
     }
   });
-}
-
-// Check for previous analysis results
-function checkForPreviousResults() {
-  fetch("/status")
-    .then((res) => res.json())
-    .then((statusData) => {
-      if (statusData.status === "completed") {
-        // There are completed results, load them
-        loadResults();
-      } else if (statusData.status === "processing") {
-        // Analysis is in progress, show status indicator
-        const statusIndicator = document.getElementById("status-indicator");
-        statusIndicator.style.display = "block";
-        statusIndicator.innerHTML =
-          statusData.message || "Analysis in progress...";
-        statusIndicator.style.backgroundColor = "#fff3cd";
-
-        // Add progress bar
-        statusIndicator.innerHTML += `<div class="progress-bar"><div class="progress" id="progress-bar" style="width: ${statusData.progress}%;"></div></div>`;
-
-        // Start polling for status
-        startStatusPolling();
-      }
-      // Otherwise, just keep the empty charts
-    })
-    .catch((err) => {
-      console.error("Error checking status:", err);
-      // Just keep the empty charts on error
-    });
 }
 
 // Start polling for status updates
@@ -612,6 +942,7 @@ function initializeRecording() {
       })
       .then(function (stream) {
         localStream = stream;
+        stream1 = stream;
         const video1 = document.getElementById("recording1");
         if (video1) {
           video1.srcObject = stream;
@@ -634,166 +965,35 @@ function initializeRecording() {
 }
 
 // Start recording session for a person
-function startRecordingSession(personIndex) {
-  let stream;
+function startRecordingTimer(personIndex) {
+  // Use a single timer display
+  const timerElement = document.getElementById("record-timer");
 
-  if (personIndex === 1) {
-    // For Person 1, use the local stream
-    stream = localStream;
-    stream1 = stream;
-  } else {
-    // For Person 2, use the remote stream from peer connection
-    const remoteVideo = document.getElementById("recording2");
-    stream = remoteVideo.srcObject;
-    stream2 = stream;
+  // Reset time
+  recordingTimes[personIndex] = 0;
 
-    // If remote stream is not available yet, alert user
-    if (!stream) {
-      alert(
-        "Remote stream not available. Please establish a video chat connection first."
-      );
-      return;
-    }
+  // Clear existing timer
+  if (recordingTimers[personIndex]) {
+    clearInterval(recordingTimers[personIndex]);
   }
 
-  // Updated selector for recording column
-  const recordingColumn = document.querySelector(
-    `.recording-column:nth-child(${personIndex})`
-  );
+  // Update timer display
+  if (timerElement) timerElement.textContent = formatTime(0);
 
-  // Clear previous recorded chunks
-  if (personIndex === 1) {
-    recordedChunks1 = [];
-  } else {
-    recordedChunks2 = [];
-  }
-
-  // Create media recorder
-  const options = { mimeType: "video/webm;codecs=vp9,opus" };
-  try {
-    const mediaRecorder = new MediaRecorder(stream, options);
-
-    // Store the media recorder
-    if (personIndex === 1) {
-      mediaRecorder1 = mediaRecorder;
-    } else {
-      mediaRecorder2 = mediaRecorder;
-    }
-
-    // Handle data available event
-    mediaRecorder.ondataavailable = function (event) {
-      if (event.data.size > 0) {
-        if (personIndex === 1) {
-          recordedChunks1.push(event.data);
-        } else {
-          recordedChunks2.push(event.data);
-        }
-      }
-    };
-
-    // Handle recording stop event
-    mediaRecorder.onstop = function () {
-      console.log(`Recording ${personIndex} stopped`);
-
-      // Create the recorded video blob
-      const blob = new Blob(
-        personIndex === 1 ? recordedChunks1 : recordedChunks2,
-        {
-          type: "video/webm",
-        }
-      );
-
-      // Create URL for the blob
-      const url = URL.createObjectURL(blob);
-
-      // Display the recorded video
-      const videoElement = document.getElementById(`recording${personIndex}`);
-      if (videoElement) {
-        videoElement.srcObject = null;
-        videoElement.src = url;
-        videoElement.controls = true;
-        videoElement.play();
-      }
-
-      // Enable analyze button if both videos are recorded
-      if (recordedChunks1.length > 0 && recordedChunks2.length > 0) {
-        const analyzeBtn = document.getElementById("analyze-recording-btn");
-        if (analyzeBtn) analyzeBtn.disabled = false;
-      }
-    };
-
-    // Start recording
-    mediaRecorder.start(1000); // Capture in 1-second chunks
-    console.log(`Recording ${personIndex} started`);
-
-    // Add recording class to the column
-    if (recordingColumn) recordingColumn.classList.add("recording");
-
-    // Start recording timer
-    startRecordingTimer(personIndex);
-
-    // Update button states
-    if (personIndex === 1) {
-      const startBtn = document.getElementById("start-recording1");
-      const stopBtn = document.getElementById("stop-recording1");
-      if (startBtn) startBtn.disabled = true;
-      if (stopBtn) stopBtn.disabled = false;
-    } else {
-      const startBtn = document.getElementById("start-recording2");
-      const stopBtn = document.getElementById("stop-recording2");
-      if (startBtn) startBtn.disabled = true;
-      if (stopBtn) stopBtn.disabled = false;
-    }
-  } catch (error) {
-    console.error(
-      `Error creating MediaRecorder for person ${personIndex}:`,
-      error
-    );
-    alert(
-      `Error creating recording for person ${personIndex}. Please check if your browser supports video recording.`
-    );
-  }
+  // Start new timer
+  recordingTimers[personIndex] = setInterval(function () {
+    recordingTimes[personIndex]++;
+    if (timerElement)
+      timerElement.textContent = formatTime(recordingTimes[personIndex]);
+  }, 1000);
 }
 
 // Stop recording session for a person
-function stopRecordingSession(personIndex) {
-  // Stop media recorder
-  if (
-    personIndex === 1 &&
-    mediaRecorder1 &&
-    mediaRecorder1.state !== "inactive"
-  ) {
-    mediaRecorder1.stop();
-    mediaRecorder1 = null;
-  } else if (
-    personIndex === 2 &&
-    mediaRecorder2 &&
-    mediaRecorder2.state !== "inactive"
-  ) {
-    mediaRecorder2.stop();
-    mediaRecorder2 = null;
-  }
-
-  // Remove recording class from column
-  const recordingColumn = document.querySelector(
-    `.recording-column:nth-child(${personIndex})`
-  );
-  if (recordingColumn) recordingColumn.classList.remove("recording");
-
-  // Stop recording timer
-  stopRecordingTimer(personIndex);
-
-  // Update button states
-  if (personIndex === 1) {
-    const startBtn = document.getElementById("start-recording1");
-    const stopBtn = document.getElementById("stop-recording1");
-    if (startBtn) startBtn.disabled = false;
-    if (stopBtn) stopBtn.disabled = true;
-  } else {
-    const startBtn = document.getElementById("start-recording2");
-    const stopBtn = document.getElementById("stop-recording2");
-    if (startBtn) startBtn.disabled = false;
-    if (stopBtn) stopBtn.disabled = true;
+function stopRecordingTimer(personIndex) {
+  // Clear timer interval
+  if (recordingTimers[personIndex]) {
+    clearInterval(recordingTimers[personIndex]);
+    recordingTimers[personIndex] = null;
   }
 }
 
@@ -1017,7 +1217,14 @@ function createPeerConnection() {
     const remoteVideo = document.getElementById("recording2");
     if (remoteVideo && remoteVideo.srcObject !== event.streams[0]) {
       remoteVideo.srcObject = event.streams[0];
+      stream2 = event.streams[0];
       console.log("Received remote stream");
+
+      const status2 = document.getElementById("status2");
+      if (status2) status2.textContent = "Connected";
+
+      const recordingSection = document.querySelector(".videos-grid");
+      if (recordingSection) recordingSection.classList.add("connected");
     }
   };
 }
@@ -1046,6 +1253,12 @@ async function createOffer() {
 // ======================================
 // RESULTS LOADING AND VISUALIZATION
 // ======================================
+// Add timestamp to all fetch requests to prevent caching
+function fetchWithTimestamp(url) {
+  const timestamp = new Date().getTime();
+  const separator = url.includes("?") ? "&" : "?";
+  return fetch(`${url}${separator}t=${timestamp}`);
+}
 
 // Load results after processing is complete
 function loadResults() {
@@ -1059,7 +1272,7 @@ function loadResults() {
   }
 
   // First get the status to find the output folder
-  fetch("/status")
+  fetchWithTimestamp("/status")
     .then((res) => res.json())
     .then((statusData) => {
       // Extract the output folder path from status data
@@ -1076,26 +1289,26 @@ function loadResults() {
 
       console.log("Loading results from folder:", outputFolder);
 
-      // Adjust all the fetch URLs to include the folder name
+      // Adjust all the fetch URLs to include the folder name and timestamp
       Promise.all([
-        fetch(`output/${folderName}/video_1/metrics_data.json`).then((res) =>
-          res.json().catch(() => ({}))
-        ),
-        fetch(`output/${folderName}/video_2/metrics_data.json`).then((res) =>
-          res.json().catch(() => ({}))
-        ),
-        fetch(`output/${folderName}/video_1/crossmodal_analysis.txt`).then(
-          (res) => res.text().catch(() => "")
-        ),
-        fetch(`output/${folderName}/video_2/crossmodal_analysis.txt`).then(
-          (res) => res.text().catch(() => "")
-        ),
-        fetch(`output/${folderName}/compatibility_score.json`).then((res) =>
-          res.json().catch(() => ({ score: 0, metrics: {} }))
-        ),
-        fetch(`output/${folderName}/compatibility_analysis.txt`).then((res) =>
-          res.text().catch(() => "")
-        ),
+        fetchWithTimestamp(
+          `output/${folderName}/video_1/metrics_data.json`
+        ).then((res) => res.json().catch(() => ({}))),
+        fetchWithTimestamp(
+          `output/${folderName}/video_2/metrics_data.json`
+        ).then((res) => res.json().catch(() => ({}))),
+        fetchWithTimestamp(
+          `output/${folderName}/video_1/crossmodal_analysis.txt`
+        ).then((res) => res.text().catch(() => "")),
+        fetchWithTimestamp(
+          `output/${folderName}/video_2/crossmodal_analysis.txt`
+        ).then((res) => res.text().catch(() => "")),
+        fetchWithTimestamp(
+          `output/${folderName}/compatibility_score.json`
+        ).then((res) => res.json().catch(() => ({ score: 0, metrics: {} }))),
+        fetchWithTimestamp(
+          `output/${folderName}/compatibility_analysis.txt`
+        ).then((res) => res.text().catch(() => "")),
       ])
         .then(
           ([
@@ -1106,6 +1319,12 @@ function loadResults() {
             scoreData,
             detailedAnalysis,
           ]) => {
+            // Clear any previous data
+            data1 = [];
+            data2 = [];
+            compatibilityScore = 0;
+
+            // Process the loaded data
             processLoadedData(
               metrics1,
               metrics2,
@@ -1135,22 +1354,22 @@ function loadFromDefaultPaths() {
   console.log("Trying to load results from default paths");
 
   Promise.all([
-    fetch("output/video_1/metrics_data.json").then((res) =>
+    fetchWithTimestamp("output/video_1/metrics_data.json").then((res) =>
       res.json().catch(() => ({}))
     ),
-    fetch("output/video_2/metrics_data.json").then((res) =>
+    fetchWithTimestamp("output/video_2/metrics_data.json").then((res) =>
       res.json().catch(() => ({}))
     ),
-    fetch("output/video_1/crossmodal_analysis.txt").then((res) =>
+    fetchWithTimestamp("output/video_1/crossmodal_analysis.txt").then((res) =>
       res.text().catch(() => "")
     ),
-    fetch("output/video_2/crossmodal_analysis.txt").then((res) =>
+    fetchWithTimestamp("output/video_2/crossmodal_analysis.txt").then((res) =>
       res.text().catch(() => "")
     ),
-    fetch("output/compatibility_score.json").then((res) =>
+    fetchWithTimestamp("output/compatibility_score.json").then((res) =>
       res.json().catch(() => ({ score: 0, metrics: {} }))
     ),
-    fetch("output/compatibility_analysis.txt").then((res) =>
+    fetchWithTimestamp("output/compatibility_analysis.txt").then((res) =>
       res.text().catch(() => "")
     ),
   ])
@@ -1163,6 +1382,11 @@ function loadFromDefaultPaths() {
         scoreData,
         detailedAnalysis,
       ]) => {
+        // Clear any previous data
+        data1 = [];
+        data2 = [];
+        compatibilityScore = 0;
+
         processLoadedData(
           metrics1,
           metrics2,
@@ -2038,4 +2262,159 @@ function adjustSliderWidth() {
     const videoWidth = v1.offsetWidth;
     timeSlider.style.width = videoWidth * 2 + 40 + "px"; // Account for gap between videos
   }
+}
+
+// Function to start recording for a specific person
+function startRecordingSession(personIndex) {
+  console.log(`Starting recording session for person ${personIndex}`);
+
+  let stream;
+  if (personIndex === 1) {
+    stream = stream1;
+    console.log("Using stream1 for person 1");
+  } else {
+    stream = stream2;
+    console.log("Using stream2 for person 2");
+  }
+
+  if (!stream) {
+    console.error(`No stream available for person ${personIndex}`);
+    return;
+  }
+
+  // Check if stream has tracks
+  if (stream.getTracks().length === 0) {
+    console.error(`Stream for person ${personIndex} has no tracks`);
+    return;
+  }
+
+  console.log(
+    `Stream for person ${personIndex} has tracks:`,
+    stream
+      .getTracks()
+      .map((t) => t.kind)
+      .join(", ")
+  );
+
+  // Clear previous recorded chunks
+  if (personIndex === 1) {
+    recordedChunks1 = [];
+  } else {
+    recordedChunks2 = [];
+  }
+
+  // Try different MIME types for better browser compatibility
+  const mimeTypes = [
+    "video/webm;codecs=vp9,opus",
+    "video/webm;codecs=vp8,opus",
+    "video/webm",
+    "video/mp4",
+  ];
+
+  let options = null;
+  for (const mimeType of mimeTypes) {
+    if (MediaRecorder.isTypeSupported(mimeType)) {
+      options = { mimeType };
+      console.log(`Using MIME type: ${mimeType}`);
+      break;
+    }
+  }
+
+  try {
+    console.log(`Creating MediaRecorder for person ${personIndex}`);
+    const mediaRecorder = new MediaRecorder(stream, options);
+
+    // Store the media recorder
+    if (personIndex === 1) {
+      mediaRecorder1 = mediaRecorder;
+    } else {
+      mediaRecorder2 = mediaRecorder;
+    }
+
+    // Handle data available event
+    mediaRecorder.ondataavailable = function (event) {
+      console.log(
+        `Data available for person ${personIndex}, size: ${event.data.size}`
+      );
+      if (event.data.size > 0) {
+        if (personIndex === 1) {
+          recordedChunks1.push(event.data);
+        } else {
+          recordedChunks2.push(event.data);
+        }
+      }
+    };
+
+    // Handle recording stop event
+    mediaRecorder.onstop = function () {
+      console.log(`Recording ${personIndex} stopped`);
+
+      // Create the recorded video blob
+      const blob = new Blob(
+        personIndex === 1 ? recordedChunks1 : recordedChunks2,
+        { type: "video/webm" }
+      );
+
+      // Create URL for the blob
+      const url = URL.createObjectURL(blob);
+
+      // Display the recorded video
+      const videoElement = document.getElementById(`recording${personIndex}`);
+      if (videoElement) {
+        videoElement.srcObject = null;
+        videoElement.src = url;
+        videoElement.controls = true;
+        videoElement.play();
+      }
+
+      // Enable analyze button if both videos are recorded
+      if (recordedChunks1.length > 0 && recordedChunks2.length > 0) {
+        const analyzeBtn = document.getElementById("analyze-recording-btn");
+        if (analyzeBtn) analyzeBtn.disabled = false;
+      }
+    };
+
+    // Start recording
+    mediaRecorder.start(1000); // Capture in 1-second chunks
+    console.log(`Recording ${personIndex} started`);
+
+    return true;
+  } catch (error) {
+    console.error(
+      `Error creating MediaRecorder for person ${personIndex}:`,
+      error
+    );
+    alert(
+      `Error creating recording for person ${personIndex}: ${error.message}`
+    );
+    return false;
+  }
+}
+
+// Function to stop recording for a specific person
+function stopRecordingSession(personIndex) {
+  console.log(`Stopping recording session for person ${personIndex}`);
+
+  // Stop media recorder
+  if (
+    personIndex === 1 &&
+    mediaRecorder1 &&
+    mediaRecorder1.state !== "inactive"
+  ) {
+    mediaRecorder1.stop();
+    console.log("Stopped mediaRecorder1");
+  } else if (
+    personIndex === 2 &&
+    mediaRecorder2 &&
+    mediaRecorder2.state !== "inactive"
+  ) {
+    mediaRecorder2.stop();
+    console.log("Stopped mediaRecorder2");
+  } else {
+    console.log(`MediaRecorder ${personIndex} not active or not found`);
+  }
+
+  // Update status display
+  const status = document.getElementById(`status${personIndex}`);
+  if (status) status.textContent = "Ready";
 }
