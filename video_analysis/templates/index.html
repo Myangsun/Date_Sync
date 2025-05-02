@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DateSync – Dual Video Analysis</title>
+    <title>DateSync – Multimodal Emotional Analysis</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
       rel="stylesheet"
@@ -12,12 +12,16 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/styles.css') }}"
     />
+    <!-- Add Chart.js for visualizations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
   </head>
   <body>
     <div class="container">
       <header class="main-header">
         <h1>DateSync</h1>
-        <p class="subtitle">Video Date Assistant</p>
+        <p class="subtitle">
+          Multimodal Emotional Analysis for Dating Interactions
+        </p>
       </header>
 
       <section class="upload-section">
@@ -55,34 +59,60 @@
         <div class="video-card">
           <h2>Video 1</h2>
           <video id="video1" controls></video>
-          <div class="metrics-row">
-            <div>Valence: <span id="val1">–</span></div>
-            <div>Comfort: <span id="com1">–</span></div>
-            <div>Engagement: <span id="eng1">–</span></div>
+          <div class="metrics-container">
+            <div class="metrics-row">
+              <div class="metric-box">
+                <div class="metric-label">Valence</div>
+                <div id="val1" class="metric-value">–</div>
+              </div>
+              <div class="metric-box">
+                <div class="metric-label">Comfort</div>
+                <div id="com1" class="metric-value">–</div>
+              </div>
+              <div class="metric-box">
+                <div class="metric-label">Engagement</div>
+                <div id="eng1" class="metric-value">–</div>
+              </div>
+            </div>
           </div>
           <div class="chart-container">
             <canvas id="chart1"></canvas>
           </div>
           <div class="feedback-card">
             <h3>Feedback</h3>
-            <p id="text1">Upload and analyze videos to see feedback</p>
+            <div id="text1" class="feedback-content">
+              Upload and analyze videos to see feedback
+            </div>
           </div>
         </div>
         <!-- VIDEO CARD 2 -->
         <div class="video-card">
           <h2>Video 2</h2>
           <video id="video2" controls></video>
-          <div class="metrics-row">
-            <div>Valence: <span id="val2">–</span></div>
-            <div>Comfort: <span id="com2">–</span></div>
-            <div>Engagement: <span id="eng2">–</span></div>
+          <div class="metrics-container">
+            <div class="metrics-row">
+              <div class="metric-box">
+                <div class="metric-label">Valence</div>
+                <div id="val2" class="metric-value">–</div>
+              </div>
+              <div class="metric-box">
+                <div class="metric-label">Comfort</div>
+                <div id="com2" class="metric-value">–</div>
+              </div>
+              <div class="metric-box">
+                <div class="metric-label">Engagement</div>
+                <div id="eng2" class="metric-value">–</div>
+              </div>
+            </div>
           </div>
           <div class="chart-container">
             <canvas id="chart2"></canvas>
           </div>
           <div class="feedback-card">
             <h3>Feedback</h3>
-            <p id="text2">Upload and analyze videos to see feedback</p>
+            <div id="text2" class="feedback-content">
+              Upload and analyze videos to see feedback
+            </div>
           </div>
         </div>
       </section>
@@ -91,6 +121,9 @@
         <div id="compatibility-score" class="compatibility-score">
           Date Compatibility Score: --
         </div>
+
+        <!-- Radar chart for comparison will be inserted here -->
+
         <div id="detailed-analysis" class="detailed-analysis">
           <h2>Compatibility Analysis</h2>
           <p>

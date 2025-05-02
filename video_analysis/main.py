@@ -120,6 +120,19 @@ def analyze_video(video_path, output_root):
         "time": [float(t) for t in metrics["time"]]
     }
 
+    # Print some statistics for debugging
+    print(f"\nMetrics Statistics:")
+    print(f"  Valence Score: {metrics_data['valence_score']:.2f}")
+    print(f"  Comfort Score: {metrics_data['comfort_score']:.2f}")
+    print(f"  Engagement Score: {metrics_data['engagement_score']:.2f}")
+    print(f"  Time Series Length: {len(metrics_data['time'])}")
+    print(
+        f"  Valence TS Range: {min(metrics_data['valence_ts']):.2f} to {max(metrics_data['valence_ts']):.2f}")
+    print(
+        f"  Comfort TS Range: {min(metrics_data['comfort_ts']):.2f} to {max(metrics_data['comfort_ts']):.2f}")
+    print(
+        f"  Engagement TS Range: {min(metrics_data['engagement_ts']):.2f} to {max(metrics_data['engagement_ts']):.2f}")
+
     with open(os.path.join(output_dir, "metrics_data.json"), "w") as f:
         json.dump(metrics_data, f)
 

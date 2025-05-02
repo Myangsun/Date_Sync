@@ -14,8 +14,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const playBtn = document.getElementById("play-btn");
   const v1 = document.getElementById("video1");
   const v2 = document.getElementById("video2");
-  const metricsImg1 = document.getElementById("metrics-img1");
-  const metricsImg2 = document.getElementById("metrics-img2");
+  const compatibilityScoreEl = document.getElementById("compatibility-score");
+  const detailedAnalysisEl = document.getElementById("detailed-analysis");
 
   // Enable analyze button when both videos are uploaded
   function checkUploadStatus() {
@@ -128,6 +128,79 @@ document.addEventListener("DOMContentLoaded", function () {
       });
   });
 
+  // Format the feedback text to improve readability
+  function formatFeedback(text) {
+    // Split text into paragraphs
+    const paragraphs = text.split(/\n\n|\r\n\r\n/);
+
+    let formattedHtml = "";
+
+    paragraphs.forEach((paragraph) => {
+      // Check if paragraph is a numbered point
+      if (/^\d+\.\s/.test(paragraph)) {
+        // It's a numbered point, make it a list item
+        const points = paragraph.split(/\d+\.\s/);
+        points.shift(); // Remove the empty first element
+
+        if (points.length > 0) {
+          formattedHtml += '<ol class="feedback-list">';
+          points.forEach((point) => {
+            formattedHtml += `<li>${point.trim()}</li>`;
+          });
+          formattedHtml += "</ol>";
+        }
+      } else if (paragraph.trim()) {
+        // Regular paragraph
+        formattedHtml += `<p class="feedback-paragraph">${paragraph.trim()}</p>`;
+      }
+    });
+
+    return formattedHtml;
+  }
+
+  // Format the compatibility analysis in a structured way
+  function formatCompatibilityAnalysis(analysisText) {
+    // Look for section headers (### Title)
+    const sections = analysisText.split(/###\s+([^\n]+)/);
+
+    if (sections.length <= 1) {
+      // If no sections are found, return the text as a single section
+      return `<div class="analysis-section">
+                <p>${analysisText}</p>
+              </div>`;
+    }
+
+    let formattedHtml = "";
+
+    // Skip the first element which is empty text before the first header
+    for (let i = 1; i < sections.length; i += 2) {
+      const title = sections[i];
+      const content = sections[i + 1] || "";
+
+      // Format content - split by bullet points
+      let contentHtml = "";
+      const points = content.split(/\s*-\s+/);
+
+      points.forEach((point, index) => {
+        if (index === 0 && !point.trim()) return; // Skip empty first element
+
+        if (point.trim()) {
+          contentHtml += `<p class="analysis-point">${point.trim()}</p>`;
+        }
+      });
+
+      formattedHtml += `
+        <div class="analysis-section">
+          <h3 class="analysis-title">${title}</h3>
+          <div class="analysis-content">
+            ${contentHtml}
+          </div>
+        </div>`;
+    }
+
+    return formattedHtml;
+  }
+
   // Load results after processing is complete
   function loadResults() {
     console.log("Loading results...");
@@ -172,31 +245,46 @@ document.addEventListener("DOMContentLoaded", function () {
           data1 = prepareTimeSeriesData(metrics1);
           data2 = prepareTimeSeriesData(metrics2);
 
-          // Display analysis text (without word limit)
-          document.getElementById("text1").textContent = analysis1;
-          document.getElementById("text2").textContent = analysis2;
+          // Display analysis text with better formatting
+          document.getElementById("text1").innerHTML =
+            formatFeedback(analysis1);
+          document.getElementById("text2").innerHTML =
+            formatFeedback(analysis2);
 
-          // Display compatibility score
+          // Display compatibility score with original styling
           compatibilityScore = scoreData.score;
-          document.getElementById(
-            "compatibility-score"
-          ).textContent = `Date Compatibility Score: ${compatibilityScore}/100`;
+          compatibilityScoreEl.innerHTML = `Date Compatibility Score: ${compatibilityScore}/100`;
 
-          // Display detailed compatibility analysis
-          document.getElementById(
-            "detailed-analysis"
-          ).innerHTML = `<h2>Compatibility Analysis</h2><p>${detailedAnalysis}</p>`;
+          // Display detailed compatibility analysis with better formatting
+          detailedAnalysisEl.innerHTML = `
+          <h2>Compatibility Analysis</h2>
+          <div class="compatibility-metrics">
+            <div class="metric-item">
+              <span class="metric-label">Emotional Synchrony</span>
+              <span class="metric-value">${
+                scoreData.metrics?.emotional_synchrony?.toFixed(2) || "N/A"
+              }</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Comfort Synchrony</span>
+              <span class="metric-value">${
+                scoreData.metrics?.comfort_synchrony?.toFixed(2) || "N/A"
+              }</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Engagement Balance</span>
+              <span class="metric-value">${
+                scoreData.metrics?.engagement_balance?.toFixed(2) || "N/A"
+              }</span>
+            </div>
+          </div>
+          <div class="analysis-content">
+            ${formatCompatibilityAnalysis(detailedAnalysis)}
+          </div>`;
 
           // Create charts for each video
           createVideoChart("chart1", data1, "Video 1 Emotional Metrics");
           createVideoChart("chart2", data2, "Video 2 Emotional Metrics");
-
-          // Display metrics images
-          metricsImg1.src = "output/video_1/metrics_over_time.png";
-          metricsImg1.style.display = "block";
-
-          metricsImg2.src = "output/video_2/metrics_over_time.png";
-          metricsImg2.style.display = "block";
 
           // Update time slider max value based on video duration
           const maxTime = Math.max(
@@ -213,8 +301,11 @@ document.addEventListener("DOMContentLoaded", function () {
           v1.src = "output/video_1.mp4";
           v2.src = "output/video_2.mp4";
 
-          // Initialize metrics display
+          // Display metrics in a more readable format
           updateMetricsDisplay(0);
+
+          // Create radar chart for comparison
+          createRadarChart(data1, data2);
 
           // Hide status indicator after a brief display of success
           setTimeout(() => {
@@ -228,6 +319,112 @@ document.addEventListener("DOMContentLoaded", function () {
           "Error loading analysis data. Please try again.";
         statusIndicator.style.backgroundColor = "#f8d7da";
       });
+  }
+
+  // Get color class based on score
+  function getScoreColorClass(score) {
+    if (score >= 80) return "high-score";
+    if (score >= 60) return "medium-score";
+    return "low-score";
+  }
+
+  // Create radar chart for comparing both videos
+  function createRadarChart(data1, data2) {
+    // Create radar chart container if it doesn't exist
+    if (!document.getElementById("radar-chart-container")) {
+      const container = document.createElement("div");
+      container.id = "radar-chart-container";
+      container.className = "radar-chart-container";
+
+      const canvas = document.createElement("canvas");
+      canvas.id = "radar-chart";
+
+      container.appendChild(canvas);
+      document
+        .querySelector(".compatibility-section")
+        .insertBefore(container, document.getElementById("detailed-analysis"));
+    }
+
+    // Get data points for current time
+    const dataPoint1 = data1[0] || { valence: 0, comfort: 0, engagement: 0 };
+    const dataPoint2 = data2[0] || { valence: 0, comfort: 0, engagement: 0 };
+
+    // Check if Chart.js is available
+    if (typeof Chart === "undefined") {
+      console.error("Chart.js is not loaded. Please include it in your HTML.");
+      return;
+    }
+
+    // Destroy existing chart if it exists
+    if (window.radarChart) {
+      window.radarChart.destroy();
+    }
+
+    // Create radar chart
+    const ctx = document.getElementById("radar-chart").getContext("2d");
+    window.radarChart = new Chart(ctx, {
+      type: "radar",
+      data: {
+        labels: ["Valence", "Comfort", "Engagement"],
+        datasets: [
+          {
+            label: "Person 1",
+            data: [
+              dataPoint1.valence_score !== undefined
+                ? dataPoint1.valence_score
+                : dataPoint1.valence,
+              dataPoint1.comfort_score !== undefined
+                ? dataPoint1.comfort_score
+                : dataPoint1.comfort,
+              dataPoint1.engagement_score !== undefined
+                ? dataPoint1.engagement_score
+                : dataPoint1.happy + dataPoint1.surprise ||
+                  dataPoint1.engagement ||
+                  0,
+            ],
+            backgroundColor: "rgba(255, 99, 132, 0.2)",
+            borderColor: "rgba(255, 99, 132, 1)",
+            borderWidth: 2,
+          },
+          {
+            label: "Person 2",
+            data: [
+              dataPoint2.valence_score !== undefined
+                ? dataPoint2.valence_score
+                : dataPoint2.valence,
+              dataPoint2.comfort_score !== undefined
+                ? dataPoint2.comfort_score
+                : dataPoint2.comfort,
+              dataPoint2.engagement_score !== undefined
+                ? dataPoint2.engagement_score
+                : dataPoint2.happy + dataPoint2.surprise ||
+                  dataPoint2.engagement ||
+                  0,
+            ],
+            backgroundColor: "rgba(54, 162, 235, 0.2)",
+            borderColor: "rgba(54, 162, 235, 1)",
+            borderWidth: 2,
+          },
+        ],
+      },
+      options: {
+        scales: {
+          r: {
+            min: -1,
+            max: 1,
+            ticks: {
+              stepSize: 0.5,
+            },
+          },
+        },
+        plugins: {
+          title: {
+            display: true,
+            text: "Emotional Metrics Comparison",
+          },
+        },
+      },
+    });
   }
 
   // Prepare time series data from metrics JSON
@@ -302,6 +499,12 @@ document.addEventListener("DOMContentLoaded", function () {
   function createVideoChart(canvasId, data, title) {
     const ctx = document.getElementById(canvasId).getContext("2d");
 
+    // Check if Chart.js is available
+    if (typeof Chart === "undefined") {
+      console.error("Chart.js is not loaded. Please include it in your HTML.");
+      return;
+    }
+
     // Prepare x-axis labels as time in seconds
     const labels = data.map((d) =>
       d.time !== undefined ? d.time.toFixed(1) : "N/A"
@@ -364,6 +567,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // Update metrics display based on time
+  // Update metrics display based on time with debugging
   function updateMetricsDisplay(time) {
     // Find the closest time point in the data
     function findClosestTimePoint(data, targetTime) {
@@ -385,45 +589,116 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Update metrics for video 1
     const dataPoint1 = findClosestTimePoint(data1, time);
+    console.log("Video 1 data point at time " + time + ":", dataPoint1);
+
     if (dataPoint1) {
-      document.getElementById("val1").textContent = (
+      const valence1 =
         dataPoint1.valence_score !== undefined
           ? dataPoint1.valence_score
-          : dataPoint1.valence
-      ).toFixed(2);
-      document.getElementById("com1").textContent = (
+          : dataPoint1.valence;
+      const comfort1 =
         dataPoint1.comfort_score !== undefined
           ? dataPoint1.comfort_score
-          : dataPoint1.comfort
-      ).toFixed(2);
-      document.getElementById("eng1").textContent = (
+          : dataPoint1.comfort;
+      const engagement1 =
         dataPoint1.engagement_score !== undefined
           ? dataPoint1.engagement_score
-          : dataPoint1.happy + dataPoint1.surprise
-      ).toFixed(2);
+          : dataPoint1.happy + dataPoint1.surprise;
+
+      console.log("Video 1 metrics:", {
+        valence: valence1,
+        comfort: comfort1,
+        engagement: engagement1,
+      });
+
+      // Update metrics with better formatting
+      document.getElementById("val1").innerHTML = `<span class="metric-value ${
+        valence1 >= 0 ? "positive" : "negative"
+      }">${valence1.toFixed(2)}</span>`;
+      document.getElementById(
+        "com1"
+      ).innerHTML = `<span class="metric-value">${comfort1.toFixed(2)}</span>`;
+      document.getElementById(
+        "eng1"
+      ).innerHTML = `<span class="metric-value">${engagement1.toFixed(
+        2
+      )}</span>`;
     }
 
     // Update metrics for video 2
     const dataPoint2 = findClosestTimePoint(data2, time);
+    console.log("Video 2 data point at time " + time + ":", dataPoint2);
+
     if (dataPoint2) {
-      document.getElementById("val2").textContent = (
+      const valence2 =
         dataPoint2.valence_score !== undefined
           ? dataPoint2.valence_score
-          : dataPoint2.valence
-      ).toFixed(2);
-      document.getElementById("com2").textContent = (
+          : dataPoint2.valence;
+      const comfort2 =
         dataPoint2.comfort_score !== undefined
           ? dataPoint2.comfort_score
-          : dataPoint2.comfort
-      ).toFixed(2);
-      document.getElementById("eng2").textContent = (
+          : dataPoint2.comfort;
+      const engagement2 =
         dataPoint2.engagement_score !== undefined
           ? dataPoint2.engagement_score
-          : dataPoint2.happy + dataPoint2.surprise
-      ).toFixed(2);
+          : dataPoint2.happy + dataPoint2.surprise;
+
+      console.log("Video 2 metrics:", {
+        valence: valence2,
+        comfort: comfort2,
+        engagement: engagement2,
+      });
+
+      // Update metrics with better formatting
+      document.getElementById("val2").innerHTML = `<span class="metric-value ${
+        valence2 >= 0 ? "positive" : "negative"
+      }">${valence2.toFixed(2)}</span>`;
+      document.getElementById(
+        "com2"
+      ).innerHTML = `<span class="metric-value">${comfort2.toFixed(2)}</span>`;
+      document.getElementById(
+        "eng2"
+      ).innerHTML = `<span class="metric-value">${engagement2.toFixed(
+        2
+      )}</span>`;
+    }
+
+    // Update radar chart if it exists
+    if (window.radarChart && dataPoint1 && dataPoint2) {
+      window.radarChart.data.datasets[0].data = [
+        dataPoint1.valence_score !== undefined
+          ? dataPoint1.valence_score
+          : dataPoint1.valence,
+        dataPoint1.comfort_score !== undefined
+          ? dataPoint1.comfort_score
+          : dataPoint1.comfort,
+        dataPoint1.engagement_score !== undefined
+          ? dataPoint1.engagement_score
+          : dataPoint1.happy + dataPoint1.surprise ||
+            dataPoint1.engagement ||
+            0,
+      ];
+
+      window.radarChart.data.datasets[1].data = [
+        dataPoint2.valence_score !== undefined
+          ? dataPoint2.valence_score
+          : dataPoint2.valence,
+        dataPoint2.comfort_score !== undefined
+          ? dataPoint2.comfort_score
+          : dataPoint2.comfort,
+        dataPoint2.engagement_score !== undefined
+          ? dataPoint2.engagement_score
+          : dataPoint2.happy + dataPoint2.surprise ||
+            dataPoint2.engagement ||
+            0,
+      ];
+
+      window.radarChart.options.plugins.title.text = `Emotional Metrics Comparison at ${time.toFixed(
+        1
+      )}s`;
+      window.radarChart.update();
     }
   }
-
   // Adjust time slider width to match video width
   function adjustSliderWidth() {
     const videoWidth = v1.offsetWidth;

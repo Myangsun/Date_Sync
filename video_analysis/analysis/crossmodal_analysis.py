@@ -135,22 +135,27 @@ def calculate_three_scores(features):
     )
 
     # 2. Comfort Level Score - from facial expressions
+    # Method: Weighted fusion of facial movements and expressions
+    # Weights: Eye movement (40%, inverted), Mouth openness (30%), Frown intensity (30%, inverted)
     comfort_level = (
-        # Less eye movement = more comfort
+        # Less eye movement = more comfort (40%)
         0.4 * (1.0 - features['eye_movement']) +
-        # Natural expression = comfort
+        # More natural mouth openness = more comfort (30%)
         0.3 * features['mouth_open'] +
-        # Less frowning = more comfort
+        # Less frowning = more comfort (30%)
         0.3 * (1.0 - features['frown'])
     )
 
     # 3. Engagement Level Score - from eye movement and audio features
+    # Method: Weighted fusion of eye movement and audio features
+    # Weights: Eye movement (50%), Pitch (30%, normalized), Audio intensity (20%)
     engagement_level = (
-        # More eye movement = more engagement
+        # More eye movement = more engagement (50%)
         0.5 * features['eye_movement'] +
-        # Higher pitch often = more engagement
+        # Higher pitch often = more engagement (30%)
         0.3 * features['pitch'] +
-        0.2 * features['intensity']           # Louder speech = more engagement
+        # Louder speech = more engagement (20%)
+        0.2 * features['intensity']
     )
 
     # Calculate temporal dynamics for additional metrics
@@ -181,6 +186,15 @@ def analyze_multimodal_features(text, text_feat, audio_feat, valence, saccade, c
     saccade = np.array(saccade, dtype=float)
     comfort = np.array(comfort, dtype=float)
 
+    # Print some debug info
+    print(f"\nAnalyzing multimodal features:")
+    print(f"  Valence array shape: {valence.shape}")
+    print(f"  Saccade array shape: {saccade.shape}")
+    print(f"  Comfort array shape: {comfort.shape}")
+    print(f"  Text sentiment: {text_feat[0]:.2f}")
+    print(
+        f"  Audio features: pitch={audio_feat[0]:.2f}, intensity={audio_feat[1]:.2f}")
+
     # Ensure text_feat and audio_feat are numpy arrays
     if not isinstance(text_feat, np.ndarray):
         text_feat = np.array(text_feat, dtype=float)
@@ -205,22 +219,25 @@ def analyze_multimodal_features(text, text_feat, audio_feat, valence, saccade, c
         }
     else:
         # Make sure all arrays have the same length
-        min_length = min(
-            len(valence),
-            len(face_features.get('saccade', [])) if len(
-                face_features.get('saccade', [])) > 0 else float('inf'),
-            len(face_features.get('comfort', [])) if len(
-                face_features.get('comfort', [])) > 0 else float('inf'),
-            len(face_features.get('frown', [])) if len(
-                face_features.get('frown', [])) > 0 else float('inf'),
-            len(face_features.get('jaw', [])) if len(
-                face_features.get('jaw', [])) > 0 else float('inf'),
-            len(face_features.get('mouth_open', [])) if len(
-                face_features.get('mouth_open', [])) > 0 else float('inf')
-        )
+        array_lengths = {
+            'valence': len(valence),
+            'saccade': len(face_features.get('saccade', [])) if len(face_features.get('saccade', [])) > 0 else float('inf'),
+            'comfort': len(face_features.get('comfort', [])) if len(face_features.get('comfort', [])) > 0 else float('inf'),
+            'frown': len(face_features.get('frown', [])) if len(face_features.get('frown', [])) > 0 else float('inf'),
+            'jaw': len(face_features.get('jaw', [])) if len(face_features.get('jaw', [])) > 0 else float('inf'),
+            'mouth_open': len(face_features.get('mouth_open', [])) if len(face_features.get('mouth_open', [])) > 0 else float('inf')
+        }
 
-        if min_length == float('inf'):
+        print(f"  Face feature array lengths: {array_lengths}")
+
+        valid_lengths = [
+            length for length in array_lengths.values() if length != float('inf')]
+        if not valid_lengths:
             min_length = len(valence)
+        else:
+            min_length = min(valid_lengths)
+
+        print(f"  Using minimum length: {min_length}")
 
         valence = valence[:min_length]
 
@@ -236,6 +253,8 @@ def analyze_multimodal_features(text, text_feat, audio_feat, valence, saccade, c
         aligned_features = align_features(
             valence, audio_feat, text_feat, face_features, fps=fps
         )
+        print(
+            f"  Successfully aligned features to {len(aligned_features['time'])} time points")
     except Exception as e:
         print(f"Error in align_features: {e}")
         # Create a minimal aligned features dictionary with just a single point
@@ -251,10 +270,12 @@ def analyze_multimodal_features(text, text_feat, audio_feat, valence, saccade, c
             'jaw': np.array([0.0]),
             'mouth_open': np.array([0.0])
         }
+        print(f"  Created fallback aligned features with 1 time point")
 
     # 2. Calculate the three core scores
     try:
         scores = calculate_three_scores(aligned_features)
+        print(f"  Successfully calculated three core scores")
     except Exception as e:
         print(f"Error in calculate_three_scores: {e}")
         # Create fallback scores with single values
@@ -266,11 +287,19 @@ def analyze_multimodal_features(text, text_feat, audio_feat, valence, saccade, c
             'comfort_stability': 0.5,
             'engagement_stability': 0.5
         }
+        print(f"  Created fallback scores with 1 time point")
 
     # 3. Calculate averages for summary
     avg_valence = float(np.mean(scores['emotion_valence']))
     avg_comfort = float(np.mean(scores['comfort_level']))
     avg_engagement = float(np.mean(scores['engagement_level']))
+
+    # Print some debug info on the scores
+    print(
+        f"  Average scores: valence={avg_valence:.2f}, comfort={avg_comfort:.2f}, engagement={avg_engagement:.2f}")
+    print(f"  Score ranges: valence=[{np.min(scores['emotion_valence']):.2f}, {np.max(scores['emotion_valence']):.2f}], " +
+          f"comfort=[{np.min(scores['comfort_level']):.2f}, {np.max(scores['comfort_level']):.2f}], " +
+          f"engagement=[{np.min(scores['engagement_level']):.2f}, {np.max(scores['engagement_level']):.2f}]")
 
     # 4. Make sure text is a string, but don't truncate it
     transcript = ""
@@ -290,7 +319,8 @@ def analyze_multimodal_features(text, text_feat, audio_feat, valence, saccade, c
         f"Text Transcript: {transcript}\n\n"
         f"Please provide actionable communication tips and insights about their "
         f"emotional expression. Focus on strengths and areas for improvement in dating "
-        f"communication. Don't mention any technical terms like 'analysis', 'scores', or 'metrics'."
+        f"communication. Format your response with clear paragraphs and numbered points "
+        f"when appropriate. Don't mention any technical terms like 'analysis', 'scores', or 'metrics'."
     )
 
     response = client.chat.completions.create(
@@ -472,7 +502,7 @@ def calculate_compatibility(video1_dir, video2_dir):
             except Exception as e:
                 print(f"Error calculating responsiveness: {e}")
 
-        # Use GPT for compatibility score calculation
+        # Use GPT for compatibility score calculation with improved formatting
         prompt = (
             f"Date 1 Emotional Profile:\n{analysis1}\n\n"
             f"Date 2 Emotional Profile:\n{analysis2}\n\n"
@@ -508,7 +538,7 @@ def calculate_compatibility(video1_dir, video2_dir):
             # Default score if we can't extract one
             score = 75
 
-        # Generate detailed compatibility analysis
+        # Generate detailed compatibility analysis with improved formatting
         detailed_prompt = (
             f"Date 1 Emotional Profile:\n{analysis1}\n\n"
             f"Date 2 Emotional Profile:\n{analysis2}\n\n"
@@ -519,10 +549,16 @@ def calculate_compatibility(video1_dir, video2_dir):
             f"- Emotional Stability: Person 1 = {stability1:.2f}, Person 2 = {stability2:.2f} (0 to 1, higher is more stable)\n"
             f"- Mutual Responsiveness: {responsiveness:.2f} (0 to 1, higher means they respond to each other's emotions)\n\n"
             "Based on these emotional profiles, provide a detailed compatibility assessment "
-            "explaining why these two people might or might not be compatible. Consider emotional "
-            "patterns, complementary traits, communication styles, and engagement levels. "
-            "Include specific strengths and potential areas of growth for this potential relationship, "
-            "particularly focusing on communication aspects."
+            "explaining why these two people might or might not be compatible. Format your response "
+            "with the following clearly labeled sections (exactly as shown, with '### ' prefix):\n\n"
+            "### Emotional Patterns and Stability\n"
+            "### Engagement Levels and Communication Style\n"
+            "### Emotional Synchrony and Compatibility\n"
+            "### Comfort and Mutual Responsiveness\n"
+            "### Strengths and Recommendations\n"
+            "### Conclusion\n\n"
+            "Within each section, use bullet points starting with '- ' to highlight key points. "
+            "Focus on communication aspects and provide concrete suggestions for improvement."
         )
 
         detailed_response = client.chat.completions.create(
@@ -549,7 +585,7 @@ def calculate_compatibility(video1_dir, video2_dir):
             }
         }
 
-        with open(os.path.join(os.path.dirname(video1_dir), "compatibility_analysis.json"), "w") as f:
+        with open(os.path.join(os.path.dirname(video1_dir), "compatibility_score.json"), "w") as f:
             json.dump(compatibility_data, f)
 
         return score, detailed_analysis

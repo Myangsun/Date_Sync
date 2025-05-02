@@ -154,20 +154,23 @@ def create_metrics_visualization(fps, valence, emotion_data, face_features, outp
 
     # Create and save CSV data safely
     try:
+        # Create consistent length arrays for CSV data
         csv_data = {
             'time': time_array,
-            'valence': valence,
-            'comfort': face_features['comfort'],
-            'saccade': face_features['saccade'],
-            'frown': face_features['frown'],
-            'mouth_open': face_features['mouth_open'],
         }
+
+        # Make sure all arrays have the same length
+        for key in ['valence', 'comfort', 'saccade', 'frown', 'mouth_open']:
+            if key == 'valence':
+                csv_data[key] = valence
+            else:
+                csv_data[key] = face_features[key]
 
         # Add jaw if available
         if 'jaw' in face_features:
-            csv_data['jaw'] = face_features['jaw']
+            csv_data['jaw'] = face_features['jaw'][:min_length]
 
-        # Add emotion data
+        # Add emotion data with proper length checking
         emotions = ['happy', 'surprise', 'neutral',
                     'sad', 'angry', 'fear', 'disgust']
         for emotion in emotions:
@@ -175,28 +178,35 @@ def create_metrics_visualization(fps, valence, emotion_data, face_features, outp
                 csv_data[emotion] = []
                 for data in emotion_data:
                     csv_data[emotion].append(data.get(emotion, 0))
+                # Ensure length matches
+                csv_data[emotion] = csv_data[emotion][:min_length]
             except Exception as e:
                 print(f"Warning: Error processing emotion '{emotion}': {e}")
                 csv_data[emotion] = np.zeros(min_length)
 
         # Add core scores if available
         if core_scores is not None and score_time is not None:
-            # Create separate columns for the downsampled data
-            try:
-                csv_data['time_5fps'] = score_time
-                if "valence_ts" in core_scores:
-                    csv_data['valence_score'] = core_scores["valence_ts"][:len(
-                        score_time)]
-                if "comfort_ts" in core_scores:
-                    csv_data['comfort_score'] = core_scores["comfort_ts"][:len(
-                        score_time)]
-                if "engagement_ts" in core_scores:
-                    csv_data['engagement_score'] = core_scores["engagement_ts"][:len(
-                        score_time)]
-            except Exception as e:
-                print(f"Warning: Error adding core scores to CSV: {e}")
+            # Create separate dataframe for the downsampled data to avoid length issues
+            score_data = {'time_5fps': score_time}
+            if "valence_ts" in core_scores:
+                score_min_len = min(len(score_time), len(
+                    core_scores["valence_ts"]))
+                score_data['valence_score'] = core_scores["valence_ts"][:score_min_len]
+            if "comfort_ts" in core_scores:
+                score_min_len = min(len(score_time), len(
+                    core_scores["comfort_ts"]))
+                score_data['comfort_score'] = core_scores["comfort_ts"][:score_min_len]
+            if "engagement_ts" in core_scores:
+                score_min_len = min(len(score_time), len(
+                    core_scores["engagement_ts"]))
+                score_data['engagement_score'] = core_scores["engagement_ts"][:score_min_len]
 
-        # Create DataFrame
+            # Save scores data to a separate CSV
+            df_scores = pd.DataFrame(score_data)
+            scores_csv_path = os.path.join(output_dir, 'scores_data.csv')
+            df_scores.to_csv(scores_csv_path, index=False)
+
+        # Create DataFrame for raw data
         df = pd.DataFrame(csv_data)
 
         # Save CSV
