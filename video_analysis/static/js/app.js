@@ -1217,6 +1217,8 @@ function createPeerConnection() {
     const remoteVideo = document.getElementById("recording2");
     if (remoteVideo && remoteVideo.srcObject !== event.streams[0]) {
       remoteVideo.srcObject = event.streams[0];
+      remoteVideo.muted = false;
+      remoteVideo.play();
       stream2 = event.streams[0];
       console.log("Received remote stream");
 
@@ -2364,6 +2366,7 @@ function startRecordingSession(personIndex) {
         videoElement.srcObject = null;
         videoElement.src = url;
         videoElement.controls = true;
+        videoElement.muted = false;
         videoElement.play();
       }
 
