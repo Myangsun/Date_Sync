@@ -191,7 +191,7 @@ function setupEventListeners() {
         const recordingSection = document.querySelector(".videos-grid");
         if (recordingSection) recordingSection.classList.add("recording");
 
-        startRecordingTimer(0);
+        startRecordingTimer(1);
       } else {
         alert("Please establish video chat connection first.");
       }
@@ -333,7 +333,6 @@ function setupEventListeners() {
     });
 
     // Record both at the same time
-    // Add this debugging code to the record button event listener
     if (recordBtn) {
       recordBtn.addEventListener("click", function () {
         console.log("Record button clicked");
@@ -379,7 +378,7 @@ function setupEventListeners() {
           if (recordingSection) recordingSection.classList.add("recording");
 
           // Start recording timer
-          startRecordingTimer(0);
+          startRecordingTimer(1);
           console.log("Recording started successfully");
         } catch (error) {
           console.error("Error starting recording:", error);
@@ -387,6 +386,32 @@ function setupEventListeners() {
         }
       });
     }
+  }
+
+  if (stopRecordingBtn) {
+    stopRecordingBtn.addEventListener("click", function () {
+      stopRecordingSession(1);
+      stopRecordingSession(2);
+
+      recordBtn.disabled = false;
+      stopRecordingBtn.disabled = true;
+      isRecording = false;
+
+      const status1 = document.getElementById("status1");
+      const status2 = document.getElementById("status2");
+      if (status1) status1.textContent = "Ready";
+      if (status2) status2.textContent = "Ready";
+
+      const recordingSection = document.querySelector(".videos-grid");
+      if (recordingSection) recordingSection.classList.remove("recording");
+
+      // Fix: use index 1 instead of 0
+      stopRecordingTimer(1);
+
+      if (recordedChunks1.length > 0 && recordedChunks2.length > 0) {
+        if (analyzeRecordingBtn) analyzeRecordingBtn.disabled = false;
+      }
+    });
   }
 
   // Handle analyze button for recordings
@@ -964,39 +989,6 @@ function initializeRecording() {
   }
 }
 
-// Start recording session for a person
-function startRecordingTimer(personIndex) {
-  // Use a single timer display
-  const timerElement = document.getElementById("record-timer");
-
-  // Reset time
-  recordingTimes[personIndex] = 0;
-
-  // Clear existing timer
-  if (recordingTimers[personIndex]) {
-    clearInterval(recordingTimers[personIndex]);
-  }
-
-  // Update timer display
-  if (timerElement) timerElement.textContent = formatTime(0);
-
-  // Start new timer
-  recordingTimers[personIndex] = setInterval(function () {
-    recordingTimes[personIndex]++;
-    if (timerElement)
-      timerElement.textContent = formatTime(recordingTimes[personIndex]);
-  }, 1000);
-}
-
-// Stop recording session for a person
-function stopRecordingTimer(personIndex) {
-  // Clear timer interval
-  if (recordingTimers[personIndex]) {
-    clearInterval(recordingTimers[personIndex]);
-    recordingTimers[personIndex] = null;
-  }
-}
-
 // Start recording timer
 function startRecordingTimer(personIndex) {
   // Reset time
@@ -1011,11 +1003,14 @@ function startRecordingTimer(personIndex) {
   const timerElement = document.getElementById(`timer${personIndex}`);
   if (timerElement) timerElement.textContent = formatTime(0);
 
-  // Start new timer
+  // Start new timer - store the timer element reference inside the closure
   recordingTimers[personIndex - 1] = setInterval(function () {
     recordingTimes[personIndex - 1]++;
-    if (timerElement)
-      timerElement.textContent = formatTime(recordingTimes[personIndex - 1]);
+    // Get fresh reference to timer element on each update to ensure it exists
+    const timer = document.getElementById(`timer${personIndex}`);
+    if (timer) {
+      timer.textContent = formatTime(recordingTimes[personIndex - 1]);
+    }
   }, 1000);
 }
 
