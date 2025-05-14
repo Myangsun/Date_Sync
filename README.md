@@ -1,5 +1,9 @@
 # Date_Sync
 
+## Introduction
+
+Our final project is in the folder video_analysis. Sample code contains our previous testing code.
+
 ## Installation
 
 - Clone this repository to your local machine
