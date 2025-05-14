@@ -21,9 +21,16 @@ python app.py
 
 ## Get access with URL
 
-Install localtunnel: npm install -g localtunnel
-Start your Flask application
-In a separate terminal, run:
-lt --port 8080
+- Install localtunnel:
 
-Share the provided URL
+```python
+npm install -g localtunnel
+```
+
+- To start our Flask application, in a separate terminal, run:
+
+```python
+lt --port 8080
+```
+
+- Share the provided URL, and you can invite your friends to join the platform and enjoy video chatting.
