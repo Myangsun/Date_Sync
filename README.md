@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Our final project is in the folder **"video_analysis"**. Previous testing code in "Sample code" folder.
+Our final project is in **video_analysis folder**. Previous testing code in sample_code folder.
 
 ## Installation
 
